@@ -23,16 +23,10 @@ StructuredBuffer<float2>	g_InputH0;
 StructuredBuffer<float>		g_InputOmega;
 RWStructuredBuffer<float2>	g_OutputHt;
 
-//---------------------------------------- Compute Shaders -----------------------------------------
 
-// Pre-FFT data preparation:
+//////////////////////////////////////////////////////////////////////////
+// Pre-FFT data preparation: H(0) -> H(t)
 
-// Notice: In CS5.0, we can output up to 8 RWBuffers but in CS4.x only one output buffer is allowed,
-// that way we have to allocate one big buffer and manage the offsets manually. The restriction is
-// not caused by NVIDIA GPUs and does not present on NVIDIA GPUs when using other computing APIs like
-// CUDA and OpenCL.
-
-// H(0) -> H(t)
 [numthreads(BLOCK_SIZE_X, BLOCK_SIZE_Y, 1)]
 void UpdateSpectrumCS(uint3 DTid : SV_DispatchThreadID)
 {

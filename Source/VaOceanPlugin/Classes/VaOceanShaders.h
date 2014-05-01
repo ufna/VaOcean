@@ -49,8 +49,8 @@ struct FUpdateSpectrumCSPerFrame
 class FUpdateSpectrumCS : public FGlobalShader
 {
 	DECLARE_SHADER_TYPE(FUpdateSpectrumCS, Global)
-public:
 
+public:
 	static bool ShouldCache(EShaderPlatform Platform)
 	{
 		return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
@@ -153,4 +153,109 @@ private:
 	FShaderResourceParameter InputOmega;
 	FShaderResourceParameter OutputHtRW;
 
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+// Radix008A_CS compute shader
+
+class FRadix008A_CS : public FGlobalShader
+{
+	DECLARE_SHADER_TYPE(FRadix008A_CS, Global)
+
+public:
+	static bool ShouldCache(EShaderPlatform Platform)
+	{
+		return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+	}
+
+	FRadix008A_CS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		ThreadCount.Bind(Initializer.ParameterMap, TEXT("g_ThreadCount"));
+		ostride.Bind(Initializer.ParameterMap, TEXT("g_ostride"));
+		istride.Bind(Initializer.ParameterMap, TEXT("g_istride"));
+		pstride.Bind(Initializer.ParameterMap, TEXT("g_pstride"));
+		PhaseBase.Bind(Initializer.ParameterMap, TEXT("g_PhaseBase"));
+
+		SrcData.Bind(Initializer.ParameterMap, TEXT("g_SrcData"));
+		DstData.Bind(Initializer.ParameterMap, TEXT("g_DstData"));
+	}
+
+	FRadix008A_CS()
+	{
+	}
+
+	void SetParameters(
+		uint32 ParamThreadCount,
+		uint32 Param_ostride,
+		uint32 Param_istride,
+		uint32 Param_pstride,
+		uint32 ParamPhaseBase
+		)
+	{
+		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
+
+		SetShaderValue(ComputeShaderRHI, ThreadCount, ParamThreadCount);
+		SetShaderValue(ComputeShaderRHI, ostride, Param_ostride);
+		SetShaderValue(ComputeShaderRHI, istride, Param_istride);
+		SetShaderValue(ComputeShaderRHI, pstride, Param_pstride);
+		SetShaderValue(ComputeShaderRHI, PhaseBase, ParamPhaseBase);
+	}
+
+	void SetParameters(FShaderResourceViewRHIRef ParamSrcData, FUnorderedAccessViewRHIRef ParamDstData)
+	{
+		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
+
+		RHISetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), ParamSrcData);
+		RHISetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), ParamDstData);
+	}
+
+	void UnsetParameters()
+	{
+		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
+
+		RHISetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), FShaderResourceViewRHIParamRef());
+		RHISetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), FUnorderedAccessViewRHIParamRef());
+	}
+
+	virtual bool Serialize(FArchive& Ar)
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << ThreadCount << ostride << istride << pstride << PhaseBase
+			<< SrcData << DstData;
+
+		return bShaderHasOutdatedParameters;
+	}
+
+private:
+	// Changed per call
+	FShaderParameter ThreadCount;
+	FShaderParameter ostride;
+	FShaderParameter istride;
+	FShaderParameter pstride;
+	FShaderParameter PhaseBase;
+
+	// Buffers
+	FShaderResourceParameter SrcData;
+	FShaderResourceParameter DstData;
+
+};
+
+/**
+ * pstride and istride parameters are excess here, but we use inheritance as its easier for now
+ */
+class FRadix008A_CS2 : public FRadix008A_CS
+{
+	DECLARE_SHADER_TYPE(FRadix008A_CS2, Global)
+
+public:
+	FRadix008A_CS2(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FRadix008A_CS(Initializer)
+	{
+	}
+
+	FRadix008A_CS2()
+	{
+	}
 };
