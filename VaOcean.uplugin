@@ -1,0 +1,21 @@
+{
+    "FileVersion" : 1,
+	
+	"FriendlyName" : "VaOcean",
+	"Version" : 1,
+	"VersionName" : "0.4-a1",
+	"CreatedBy" : "Vladimir Alyamkin",
+	"CreatedByURL" : "http://ufna.ru",
+	"EngineVersion" : 1579795,
+	"Description" : "Ocean Surface Simulation",
+	"Category" : "Environment",
+	
+    "Modules" :
+	[
+		{
+			"Name" : "VaOceanPlugin",
+			"Type" : "Runtime",
+			"LoadingPhase" : "PostConfigInit"
+		}
+	]
+}
