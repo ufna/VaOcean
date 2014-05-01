@@ -17,4 +17,5 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVaOcean, Log, All)
 #include "IVaOceanPlugin.h"
 
 #include "VaOceanShaders.h"
+#include "VaOceanRadixFFT.h"
 #include "VaOceanSimulatorComponent.h"

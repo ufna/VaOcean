@@ -14,7 +14,7 @@ struct FOceanData
 	GENERATED_USTRUCT_BODY()
 
 	/** The size of displacement map. Must be power of 2. */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
+	UPROPERTY(BlueprintReadOnly, Category = Ocean)
 	int32 DispMapDimension;
 
 	/** The side length (world space) of square patch. Typical value is 1000 ~ 2000. */
@@ -46,10 +46,10 @@ struct FOceanData
 	UPROPERTY(EditDefaultsOnly, Category = Ocean)
 	float ChoppyScale;
 
-	/** defaults */
+	/** Defaults */
 	FOceanData()
 	{
-		DispMapDimension = 512;
+		DispMapDimension = 512;		// Not editable because of FFT shader config
 		PatchLength = 2000.0f;
 		TimeScale = 0.8f;
 		WaveAmplitude = 0.35f;
@@ -94,6 +94,7 @@ public:
 
 	// Begin UObject Interface
 #if WITH_EDITOR
+	virtual void PostInitProperties() OVERRIDE;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) OVERRIDE;
 	virtual void BeginDestroy() OVERRIDE;
 #endif // WITH_EDITOR
@@ -133,5 +134,8 @@ protected:
 	FStructuredBufferRHIRef m_pBuffer_Float_Dxyz;
 	FUnorderedAccessViewRHIRef m_pUAV_Dxyz;
 	FShaderResourceViewRHIRef m_pSRV_Dxyz;
+
+	// FFT wrap-up
+	FRadixPlan512 FFTPlan;
 
 };

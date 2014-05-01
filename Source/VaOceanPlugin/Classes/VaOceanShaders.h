@@ -159,6 +159,9 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Radix008A_CS compute shader
 
+/**
+ * FFT calculations for istride > 1 
+ */
 class FRadix008A_CS : public FGlobalShader
 {
 	DECLARE_SHADER_TYPE(FRadix008A_CS, Global)

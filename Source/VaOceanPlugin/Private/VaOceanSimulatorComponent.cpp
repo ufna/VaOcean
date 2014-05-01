@@ -78,8 +78,8 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	UpdateSpectrumCSImmutableParams.g_InWidth = UpdateSpectrumCSImmutableParams.g_ActualDim + 4;
 	UpdateSpectrumCSImmutableParams.g_OutWidth = UpdateSpectrumCSImmutableParams.g_ActualDim;
 	UpdateSpectrumCSImmutableParams.g_OutHeight = UpdateSpectrumCSImmutableParams.g_ActualDim;
-	UpdateSpectrumCSImmutableParams.g_DtxAddressOffset = UpdateSpectrumCSImmutableParams.g_ActualDim * UpdateSpectrumCSImmutableParams.g_ActualDim;
-	UpdateSpectrumCSImmutableParams.g_DtyAddressOffset = UpdateSpectrumCSImmutableParams.g_ActualDim * UpdateSpectrumCSImmutableParams.g_ActualDim * 2;
+	UpdateSpectrumCSImmutableParams.g_DtxAddressOffset = FMath::Square(UpdateSpectrumCSImmutableParams.g_ActualDim);
+	UpdateSpectrumCSImmutableParams.g_DtyAddressOffset = FMath::Square(UpdateSpectrumCSImmutableParams.g_ActualDim) * 2;
 
 	// Height map H(0)
 	int32 height_map_size = (OceanConfig.DispMapDimension + 4) * (OceanConfig.DispMapDimension + 1);
@@ -120,12 +120,22 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
 	CreateBufferAndUAV(&zero_data, 3 * output_size * float2_stride, float2_stride, m_pBuffer_Float_Dxyz, m_pUAV_Dxyz, m_pSRV_Dxyz);
 
+	// FFT
+	RadixCreatePlan(&FFTPlan, 3);
+}
+
+void UVaOceanSimulatorComponent::PostInitProperties()
+{
+	Super::PostInitProperties();
+
 	// Update maps for the first time
 	UpdateDisplacementMap(0);
 }
 
 void UVaOceanSimulatorComponent::BeginDestroy()
 {
+	RadixDestroyPlan(&FFTPlan);
+
 	m_pBuffer_Float2_H0.SafeRelease();
 	m_pUAV_H0.SafeRelease();
 	m_pSRV_H0.SafeRelease();
@@ -173,8 +183,6 @@ void UVaOceanSimulatorComponent::InitHeightMap(FOceanData& Params, TResourceArra
 
 			out_h0[i * (height_map_dim + 4) + j].X = float(phil * Gauss() * HALF_SQRT_2);
 			out_h0[i * (height_map_dim + 4) + j].Y = float(phil * Gauss() * HALF_SQRT_2);
-
-			//UE_LOG(LogOcean, Warning, TEXT("Update spectrum here %d"), i * height_map_dim + j);
 
 			// The angular frequency is following the dispersion relation:
 			//            out_omega^2 = g*k
@@ -254,4 +262,17 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 			UpdateSpectrumCS->UnsetParameters();
 		});
+
+	// ------------------------------------ Perform FFT -------------------------------------------
+	ENQUEUE_UNIQUE_RENDER_COMMAND_FOURPARAMETER(
+		RadixFFTCommand,
+		FRadixPlan512*, pPlan, &FFTPlan,
+		FUnorderedAccessViewRHIRef, m_pUAV_Dxyz, m_pUAV_Dxyz,
+		FShaderResourceViewRHIRef, m_pSRV_Dxyz, m_pSRV_Dxyz,
+		FShaderResourceViewRHIRef, m_pSRV_Ht, m_pSRV_Ht,
+		{
+			RadixCompute(pPlan, m_pUAV_Dxyz, m_pSRV_Dxyz, m_pSRV_Ht);
+		});
+
 }
+	
