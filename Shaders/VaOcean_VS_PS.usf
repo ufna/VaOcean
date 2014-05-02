@@ -1,0 +1,59 @@
+// Copyright 2014 Vladimir Alyamkin. All Rights Reserved.
+
+#include "Common.usf"
+
+
+//////////////////////////////////////////////////////////////////////////
+// Vertex shaders
+
+void QuadVS(
+	in float4 InPosition : ATTRIBUTE0,
+	in float2 InTexCoord : ATTRIBUTE1,
+	out float2 OutTexCoord : TEXCOORD0,
+	out float4 OutPosition : SV_POSITION)
+{
+	OutPosition = InPosition;
+	OutTexCoord.x = 0.5f + InPosition.x * 0.5f;
+	OutTexCoord.y = 0.5f - InPosition.y * 0.5f;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Pixel shaders
+
+// Textures and sampling states
+//Texture2D g_samplerDisplacementMap;
+//SamplerState LinearSampler;
+
+// Immutable
+uint g_ActualDim;
+uint g_InWidth;
+uint g_OutWidth;
+uint g_OutHeight;
+uint g_DtxAddressOffset;
+uint g_DtyAddressOffset;
+
+// Changed per frame
+float g_Time;
+float g_ChoppyScale;
+float g_GridLen;
+
+// The following three should contains only real numbers. But we have only C2C FFT now.
+StructuredBuffer<float2>	g_InputDxyz;
+
+// Post-FFT data wrap up: Dx, Dy, Dz -> Displacement
+void UpdateDisplacementPS(float2 UV : TEXCOORD0, out float4 OutColor : SV_Target0)
+{
+	uint index_x = (uint)(UV.x * (float)g_OutWidth);
+	uint index_y = (uint)(UV.y * (float)g_OutHeight);
+	uint addr = g_OutWidth * index_y + index_x;
+
+	// cos(pi * (m1 + m2))
+	int sign_correction = ((index_x + index_y) & 1) ? -1 : 1;
+
+	float dx = g_InputDxyz[addr + g_DtxAddressOffset].x * sign_correction * g_ChoppyScale;
+	float dy = g_InputDxyz[addr + g_DtyAddressOffset].x * sign_correction * g_ChoppyScale;
+	float dz = g_InputDxyz[addr].x * sign_correction;
+
+	OutColor = float4(dx, dy, dz, 1);
+}

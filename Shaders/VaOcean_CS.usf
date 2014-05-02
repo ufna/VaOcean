@@ -59,9 +59,9 @@ void UpdateSpectrumCS(uint3 DTid : SV_DispatchThreadID)
 	float2 dt_x = float2(ht.y * kx, -ht.x * kx);
 	float2 dt_y = float2(ht.y * ky, -ht.x * ky);
 
-    if ((DTid.x < g_OutWidth) && (DTid.y < g_OutHeight))
+	if ((DTid.x < g_OutWidth) && (DTid.y < g_OutHeight))
 	{
-        g_OutputHt[out_index] = ht;
+		g_OutputHt[out_index] = float2(cos(g_Time),1.0); //ht;
 		g_OutputHt[out_index + g_DtxAddressOffset] = dt_x;
 		g_OutputHt[out_index + g_DtyAddressOffset] = dt_y;
 	}

@@ -61,17 +61,24 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 {
 	bAutoActivate = true;
 	PrimaryComponentTick.bCanEverTick = true;
-	//PrimaryComponentTick.TickGroup = TG_DuringPhysics;
+	PrimaryComponentTick.TickGroup = TG_DuringPhysics;
 
 	if (NormalsTarget)
 	{
-		NormalsTarget->bForceLinearGamma = true;
+	//	NormalsTarget->bNeedsTwoCopies = true;
+	//	NormalsTarget->bForceLinearGamma = true;
 	}
 
 	if (HeightTarget)
 	{
 		HeightTarget->bForceLinearGamma = true;
 	}
+
+	// Vertex to draw on render targets
+	m_pQuadVB[0].Set(-1.0f, -1.0f, 0.0f, 1.0f);
+	m_pQuadVB[1].Set(-1.0f,  1.0f, 0.0f, 1.0f);
+	m_pQuadVB[2].Set( 1.0f, -1.0f, 0.0f, 1.0f);
+	m_pQuadVB[3].Set( 1.0f,  1.0f, 0.0f, 1.0f);
 
 	// Cache shader immutable parameters (looks ugly, but nicely used then)
 	UpdateSpectrumCSImmutableParams.g_ActualDim = OceanConfig.DispMapDimension;
@@ -102,23 +109,24 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	// RW buffer allocations
 	// H0
 	uint32 float2_stride = 2 * sizeof(float);
-	CreateBufferAndUAV(&h0_data, input_full_size * float2_stride, float2_stride, m_pBuffer_Float2_H0, m_pUAV_H0, m_pSRV_H0);
+	CreateBufferAndUAV(&h0_data, input_full_size * float2_stride, float2_stride, &m_pBuffer_Float2_H0, &m_pUAV_H0, &m_pSRV_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
-	CreateBufferAndUAV(&zero_data, 3 * input_half_size * float2_stride, float2_stride, m_pBuffer_Float2_Ht, m_pUAV_Ht, m_pSRV_Ht);
+	CreateBufferAndUAV(&zero_data, 3 * input_half_size * float2_stride, float2_stride, &m_pBuffer_Float2_Ht, &m_pUAV_Ht, &m_pSRV_Ht);
 
 	// omega
-	CreateBufferAndUAV(&omega_data, input_full_size * sizeof(float), sizeof(float), m_pBuffer_Float_Omega, m_pUAV_Omega, m_pSRV_Omega);
+	CreateBufferAndUAV(&omega_data, input_full_size * sizeof(float), sizeof(float), &m_pBuffer_Float_Omega, &m_pUAV_Omega, &m_pSRV_Omega);
 
 	// Re-init the array because it was discarded by previous buffer creation
+	zero_data.Empty();
 	zero_data.Init(0.0f, 3 * output_size * 2);
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
-	CreateBufferAndUAV(&zero_data, 3 * output_size * float2_stride, float2_stride, m_pBuffer_Float_Dxyz, m_pUAV_Dxyz, m_pSRV_Dxyz);
+	CreateBufferAndUAV(&zero_data, 3 * output_size * float2_stride, float2_stride, &m_pBuffer_Float_Dxyz, &m_pUAV_Dxyz, &m_pSRV_Dxyz);
 
 	// FFT
 	RadixCreatePlan(&FFTPlan, 3);
@@ -128,13 +136,19 @@ void UVaOceanSimulatorComponent::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	// Update maps for the first time
-	UpdateDisplacementMap(0);
+	// Setup render target helpers
+	if (NormalsTarget)
+	{
+		//m_pDisplacementSRV = RHICreateShaderResourceView((FTexture2DRHIRef&)NormalsTarget->GetRenderTargetResource()->TextureRHI, 0, 1, PF_A32B32G32R32F);
+		//m_pDisplacementRTV = FRHIRenderTargetView(NormalsTarget->GetRenderTargetResource()->TextureRHI);
+	}
 }
 
 void UVaOceanSimulatorComponent::BeginDestroy()
 {
 	RadixDestroyPlan(&FFTPlan);
+
+	m_pDisplacementSRV.SafeRelease();
 
 	m_pBuffer_Float2_H0.SafeRelease();
 	m_pUAV_H0.SafeRelease();
@@ -198,11 +212,11 @@ void UVaOceanSimulatorComponent::InitHeightMap(FOceanData& Params, TResourceArra
 }
 
 void UVaOceanSimulatorComponent::CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
-	FStructuredBufferRHIRef& ppBuffer, FUnorderedAccessViewRHIRef& ppUAV, FShaderResourceViewRHIRef& ppSRV)
+	FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV)
 {
-	ppBuffer = RHICreateStructuredBuffer(byte_stride, Data->GetResourceDataSize(), Data, (BUF_UnorderedAccess | BUF_ShaderResource));
-	ppUAV = RHICreateUnorderedAccessView(ppBuffer, false, false);
-	ppSRV = RHICreateShaderResourceView(ppBuffer);
+	*ppBuffer = RHICreateStructuredBuffer(byte_stride, Data->GetResourceDataSize(), Data, (BUF_UnorderedAccess | BUF_ShaderResource));
+	*ppUAV = RHICreateUnorderedAccessView(*ppBuffer, false, false);
+	*ppSRV = RHICreateShaderResourceView(*ppBuffer);
 }
 
 
@@ -231,20 +245,26 @@ void UVaOceanSimulatorComponent::UpdateContent()
 	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
 }
 
+/** Vertex declaration for the fullscreen 2D quad */
+TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
+
 void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 {
+	if (NormalsTarget == NULL)
+		return;
+	
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
-	FUpdateSpectrumCSPerFrame PerFrameParams;
-	PerFrameParams.g_Time = WorldTime * OceanConfig.TimeScale;
-	PerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
-	PerFrameParams.m_pSRV_H0 = m_pSRV_H0;
-	PerFrameParams.m_pSRV_Omega = m_pSRV_Omega;
-	PerFrameParams.m_pUAV_Ht = m_pUAV_Ht;
+	FUpdateSpectrumCSPerFrame UpdateSpectrumCSPerFrameParams;
+	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * OceanConfig.TimeScale;
+	UpdateSpectrumCSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
+	UpdateSpectrumCSPerFrameParams.m_pSRV_H0 = m_pSRV_H0;
+	UpdateSpectrumCSPerFrameParams.m_pSRV_Omega = m_pSRV_Omega;
+	UpdateSpectrumCSPerFrameParams.m_pUAV_Ht = m_pUAV_Ht;
 
 	ENQUEUE_UNIQUE_RENDER_COMMAND_TWOPARAMETER(
 		UpdateSpectrumCSCommand,
 		FUpdateSpectrumCSImmutable, ImmutableParams, UpdateSpectrumCSImmutableParams,
-		FUpdateSpectrumCSPerFrame, PerFrameParams, PerFrameParams,
+		FUpdateSpectrumCSPerFrame, PerFrameParams, UpdateSpectrumCSPerFrameParams,
 		{
 			TShaderMapRef<FUpdateSpectrumCS> UpdateSpectrumCS(GetGlobalShaderMap());
 			RHISetComputeShader(UpdateSpectrumCS->GetComputeShader());
@@ -271,8 +291,53 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FShaderResourceViewRHIRef, m_pSRV_Dxyz, m_pSRV_Dxyz,
 		FShaderResourceViewRHIRef, m_pSRV_Ht, m_pSRV_Ht,
 		{
-			RadixCompute(pPlan, m_pUAV_Dxyz, m_pSRV_Dxyz, m_pSRV_Ht);
+			//RadixCompute(pPlan, m_pUAV_Dxyz, m_pSRV_Dxyz, m_pSRV_Ht);
 		});
 
+	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
+	FUpdateDisplacementPSPerFrame UpdateDisplacementPSPerFrameParams;
+	UpdateDisplacementPSPerFrameParams.g_Time = WorldTime * OceanConfig.TimeScale;
+	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
+	UpdateDisplacementPSPerFrameParams.g_GridLen = OceanConfig.DispMapDimension / OceanConfig.PatchLength;
+	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Ht;// m_pSRV_Dxyz;
+	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
+
+	FTextureRenderTargetResource* TextureRenderTarget = NormalsTarget->GameThread_GetRenderTargetResource();
+
+	ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
+		UpdateDisplacementPSCommand,
+		FTextureRenderTargetResource*, TextureRenderTarget, TextureRenderTarget,
+		FUpdateSpectrumCSImmutable, ImmutableParams, UpdateSpectrumCSImmutableParams,		// We're using the same params as for CS
+		FUpdateDisplacementPSPerFrame, PerFrameParams, UpdateDisplacementPSPerFrameParams,
+		{
+			FLinearColor Color = FLinearColor::Red;
+			Color.R = (FMath::Cos(PerFrameParams.g_Time) + 1) / 2;
+
+			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
+			RHIClear(true, Color, false, 0.f, false, 0, FIntRect());
+
+			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
+			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap());
+
+			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
+			SetGlobalBoundShaderState(UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *UpdateDisplacementPS);
+
+			UpdateDisplacementPS->SetParameters(ImmutableParams.g_ActualDim,
+				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
+				ImmutableParams.g_DtxAddressOffset, ImmutableParams.g_DtyAddressOffset);
+
+			UpdateDisplacementPS->SetParameters(PerFrameParams.g_Time, PerFrameParams.g_ChoppyScale, 
+				PerFrameParams.g_GridLen, PerFrameParams.g_InputDxyz);
+
+			RHIDrawPrimitiveUP(PT_TriangleStrip, 4, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			RHICopyToResolveTarget(
+				TextureRenderTarget->GetRenderTargetTexture(),	// Source texture
+				TextureRenderTarget->TextureRHI,
+				false,											// Do we need the source image content again?
+				FResolveParams());								// Resolve parameters
+
+			UpdateDisplacementPS->UnsetParameters();
+		});
+	
 }
 	

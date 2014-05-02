@@ -85,7 +85,7 @@ protected:
 	void InitHeightMap(FOceanData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega);
 
 	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
-		FStructuredBufferRHIRef& ppBuffer, FUnorderedAccessViewRHIRef& ppUAV, FShaderResourceViewRHIRef& ppSRV);
+		FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
 
 public:
 	// Begin UActorComponent Interface
@@ -105,6 +105,17 @@ public:
 	void UpdateDisplacementMap(float WorldTime);
 
 protected:
+
+	//////////////////////////////////////////////////////////////////////////
+	// Render target helpers
+
+	// Displacement map
+	FShaderResourceViewRHIRef m_pDisplacementSRV;
+	FRHIRenderTargetView m_pDisplacementRTV;
+
+	// Gradient field
+	FShaderResourceViewRHIRef m_pGradientSRV;
+	FRHIRenderTargetView m_pGradientRTV;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Parameters that will be send to rendering thread
@@ -134,6 +145,8 @@ protected:
 	FStructuredBufferRHIRef m_pBuffer_Float_Dxyz;
 	FUnorderedAccessViewRHIRef m_pUAV_Dxyz;
 	FShaderResourceViewRHIRef m_pSRV_Dxyz;
+
+	FVector4 m_pQuadVB[4];
 
 	// FFT wrap-up
 	FRadixPlan512 FFTPlan;

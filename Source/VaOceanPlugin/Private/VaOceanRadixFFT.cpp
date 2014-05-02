@@ -68,7 +68,6 @@ void RadixCreatePlan(FRadixPlan512* Plan, uint32 Slices)
 	Plan->Slices = Slices;
 
 	// Create 6 param sets for 512x512 transform
-	// Buffer 0
 	const uint32 thread_count = Plan->Slices * (512 * 512) / 8;
 	uint32 ostride = 512 * 512 / 8;
 	uint32 istride = ostride;
@@ -92,7 +91,7 @@ void RadixCreatePlan(FRadixPlan512* Plan, uint32 Slices)
 	}
 	
 	// Temp buffers
-	uint32 BytesPerElement = sizeof(float)* 2;
+	uint32 BytesPerElement = sizeof(float) * 2;
 	uint32 NumElements = (512 * Plan->Slices) * 512; 
 	Plan->pBuffer_Tmp = RHICreateStructuredBuffer(BytesPerElement, BytesPerElement * NumElements, NULL, (BUF_UnorderedAccess | BUF_ShaderResource));
 	Plan->pUAV_Tmp = RHICreateUnorderedAccessView(Plan->pBuffer_Tmp, false, false);
@@ -129,9 +128,9 @@ void RadixCompute(FRadixPlan512* Plan,
 	istride /= 8;
 	Radix008A(Plan, 3, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 
-	istride /= 8;
+	/*istride /= 8;
 	Radix008A(Plan, 4, pUAV_Tmp, pSRV_Dst, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);
+	Radix008A(Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);*/
 }
