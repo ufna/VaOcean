@@ -63,17 +63,6 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	PrimaryComponentTick.bCanEverTick = true;
 	//PrimaryComponentTick.TickGroup = TG_DuringPhysics;
 
-	if (NormalsTarget)
-	{
-	//	NormalsTarget->bNeedsTwoCopies = true;
-	//	NormalsTarget->bForceLinearGamma = true;
-	}
-
-	if (HeightTarget)
-	{
-		HeightTarget->bForceLinearGamma = true;
-	}
-
 	// Vertex to draw on render targets
 	m_pQuadVB[0].Set(-1.0f, -1.0f, 0.0f, 1.0f);
 	m_pQuadVB[1].Set(-1.0f,  1.0f, 0.0f, 1.0f);
@@ -215,7 +204,7 @@ void UVaOceanSimulatorComponent::PostEditChangeProperty(FPropertyChangedEvent& P
 	// AActor::PostEditChange will ForceUpdateComponents()
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	UpdateContent();
+	//UpdateContent();
 }
 #endif // WITH_EDITOR
 
@@ -236,7 +225,7 @@ TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
 
 void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 {
-	if (NormalsTarget == NULL)
+	if (DisplacementTarget == NULL || GradientTarget == NULL)
 		return;
 	
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
@@ -294,7 +283,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
 	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
-	FTextureRenderTargetResource* TextureRenderTarget = NormalsTarget->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* TextureRenderTarget = DisplacementTarget->GameThread_GetRenderTargetResource();
 
 	ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
 		UpdateDisplacementPSCommand,

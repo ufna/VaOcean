@@ -70,11 +70,11 @@ class UVaOceanSimulatorComponent : public UActorComponent
 
 	/** Render target for normal map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* NormalsTarget;
+	class UTextureRenderTarget2D* DisplacementTarget;
 
 	/** Render target for height map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* HeightTarget;
+	class UTextureRenderTarget2D* GradientTarget;
 
 protected:
 	/** Ocean spectrum data */
