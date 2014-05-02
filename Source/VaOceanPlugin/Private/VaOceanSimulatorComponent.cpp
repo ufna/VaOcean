@@ -299,6 +299,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
 
 			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
+			//RHIClear(true, FLinearColor::Black, false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
 			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap());
@@ -340,6 +341,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
 
 			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
+			//RHIClear(true, FLinearColor::Black, false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
 			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap());
