@@ -431,6 +431,22 @@ private:
 };
 
 
+//////////////////////////////////////////////////////////////////////////
+// Generate Normal
+
+/** Per frame parameters for UpdateDisplacementPS shader */
+USTRUCT()
+struct FGenGradientFoldingPSPerFrame
+{
+	GENERATED_USTRUCT_BODY()
+
+	FVector4 m_pQuadVB[4];
+
+	// Used to pass params into render thread
+	float g_ChoppyScale;
+	float g_GridLen;
+};
+
 /**
  * Displacement -> Normal, Folding
  */

@@ -283,11 +283,11 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
 	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
-	FTextureRenderTargetResource* TextureRenderTarget = DisplacementTarget->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* DisplacementRenderTarget = DisplacementTarget->GameThread_GetRenderTargetResource();
 
 	ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
 		UpdateDisplacementPSCommand,
-		FTextureRenderTargetResource*, TextureRenderTarget, TextureRenderTarget,
+		FTextureRenderTargetResource*, TextureRenderTarget, DisplacementRenderTarget,
 		FUpdateSpectrumCSImmutable, ImmutableParams, UpdateSpectrumCSImmutableParams,		// We're using the same params as for CS
 		FUpdateDisplacementPSPerFrame, PerFrameParams, UpdateDisplacementPSPerFrameParams,
 		{
@@ -316,6 +316,46 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 			UpdateDisplacementPS->UnsetParameters();
 		});
+
+	// ----------------------------------- Generate Normal ----------------------------------------
+	FGenGradientFoldingPSPerFrame GenGradientFoldingPSPerFrameParams;
+	GenGradientFoldingPSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
+	GenGradientFoldingPSPerFrameParams.g_GridLen = OceanConfig.DispMapDimension / OceanConfig.PatchLength;
+	FMemory::Memcpy(GenGradientFoldingPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
+
+	FTextureRenderTargetResource* GradientRenderTarget = GradientTarget->GameThread_GetRenderTargetResource();
+
+	ENQUEUE_UNIQUE_RENDER_COMMAND_FOURPARAMETER(
+		GenGradientFoldingPSCommand,
+		FTextureRenderTargetResource*, TextureRenderTarget, GradientRenderTarget,
+		FUpdateSpectrumCSImmutable, ImmutableParams, UpdateSpectrumCSImmutableParams,		// We're using the same params as for CS
+		FGenGradientFoldingPSPerFrame, PerFrameParams, GenGradientFoldingPSPerFrameParams,
+		FTextureRenderTargetResource*, DisplacementRenderTarget, DisplacementRenderTarget,
+		{
+			FUpdateDisplacementUniformParameters Parameters;
+			Parameters.ChoppyScale = PerFrameParams.g_ChoppyScale;
+			Parameters.GridLen = PerFrameParams.g_GridLen;
+
+			FUpdateDisplacementUniformBufferRef UniformBuffer =
+				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+
+			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
+
+			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
+			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap());
+
+			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
+			SetGlobalBoundShaderState(UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *GenGradientFoldingPS);
+
+			GenGradientFoldingPS->SetParameters(ImmutableParams.g_ActualDim,
+				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
+				ImmutableParams.g_DtxAddressOffset, ImmutableParams.g_DtyAddressOffset);
+
+			GenGradientFoldingPS->SetParameters(UniformBuffer, DisplacementRenderTarget->TextureRHI);
+
+			RHIDrawPrimitiveUP(PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+
+			GenGradientFoldingPS->UnsetParameters();
+	});
 	
 }
-	
