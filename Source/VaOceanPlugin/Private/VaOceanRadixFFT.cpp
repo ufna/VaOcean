@@ -14,19 +14,26 @@ void Radix008A(FRadixPlan512* Plan,
 	// Setup execution configuration
 	uint32 grid = ThreadCount / COHERENCY_GRANULARITY;
 
+	FRadixFFTUniformParameters Parameters;
+	Parameters.ThreadCount = Plan->PerFrame[ParamSet].ThreadCount;
+	Parameters.ostride = Plan->PerFrame[ParamSet].ostride;
+	Parameters.istride = Plan->PerFrame[ParamSet].istride;
+	Parameters.pstride = Plan->PerFrame[ParamSet].pstride;
+	Parameters.PhaseBase = Plan->PerFrame[ParamSet].PhaseBase;
+
+	FRadixFFTUniformBufferRef UniformBuffer =
+		FRadixFFTUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+
 	if (istride > 1)
 	{
 		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap());
 		RHISetComputeShader(Radix008A_CS->GetComputeShader());
 
-		Radix008A_CS->SetParameters(Plan->PerFrame[ParamSet].ThreadCount,
-			Plan->PerFrame[ParamSet].ostride,
-			Plan->PerFrame[ParamSet].istride,
-			Plan->PerFrame[ParamSet].pstride,
-			Plan->PerFrame[ParamSet].PhaseBase);
-
+		Radix008A_CS->SetParameters(UniformBuffer);
 		Radix008A_CS->SetParameters(pSRV_Src, pUAV_Dst);
+
 		RHIDispatchComputeShader(grid, 1, 1);
+
 		Radix008A_CS->UnsetParameters();
 	}
 	else
@@ -34,14 +41,11 @@ void Radix008A(FRadixPlan512* Plan,
 		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap());
 		RHISetComputeShader(Radix008A_CS2->GetComputeShader());
 
-		Radix008A_CS2->SetParameters(Plan->PerFrame[ParamSet].ThreadCount,
-			Plan->PerFrame[ParamSet].ostride,
-			Plan->PerFrame[ParamSet].istride,
-			Plan->PerFrame[ParamSet].pstride,
-			Plan->PerFrame[ParamSet].PhaseBase);
-
+		Radix008A_CS2->SetParameters(UniformBuffer);
 		Radix008A_CS2->SetParameters(pSRV_Src, pUAV_Dst);
+
 		RHIDispatchComputeShader(grid, 1, 1);
+
 		Radix008A_CS2->UnsetParameters();
 	}
 }
@@ -128,9 +132,9 @@ void RadixCompute(FRadixPlan512* Plan,
 	istride /= 8;
 	Radix008A(Plan, 3, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 
-	/*istride /= 8;
+	istride /= 8;
 	Radix008A(Plan, 4, pUAV_Tmp, pSRV_Dst, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);*/
+	Radix008A(Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 }

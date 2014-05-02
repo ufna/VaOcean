@@ -14,10 +14,6 @@ uint g_OutHeight;
 uint g_DtxAddressOffset;
 uint g_DtyAddressOffset;
 
-// Changed per frame
-float g_Time;
-float g_ChoppyScale;
-
 // Buffers
 StructuredBuffer<float2>	g_InputH0;
 StructuredBuffer<float>		g_InputOmega;
@@ -38,7 +34,7 @@ void UpdateSpectrumCS(uint3 DTid : SV_DispatchThreadID)
 	float2 h0_k  = g_InputH0[in_index];
 	float2 h0_mk = g_InputH0[in_mindex];
 	float sin_v, cos_v;
-	sincos(g_InputOmega[in_index] * g_Time, sin_v, cos_v);
+	sincos(g_InputOmega[in_index] * VaPerFrameSp.Time, sin_v, cos_v);
 
 	float2 ht;
 	ht.x = (h0_k.x + h0_mk.x) * cos_v - (h0_k.y + h0_mk.y) * sin_v;
@@ -61,7 +57,7 @@ void UpdateSpectrumCS(uint3 DTid : SV_DispatchThreadID)
 
 	if ((DTid.x < g_OutWidth) && (DTid.y < g_OutHeight))
 	{
-		g_OutputHt[out_index] = float2(cos(g_Time),1.0); //ht;
+		g_OutputHt[out_index] = ht;
 		g_OutputHt[out_index + g_DtxAddressOffset] = dt_x;
 		g_OutputHt[out_index + g_DtyAddressOffset] = dt_y;
 	}

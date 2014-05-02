@@ -21,10 +21,6 @@ void QuadVS(
 //////////////////////////////////////////////////////////////////////////
 // Pixel shaders
 
-// Textures and sampling states
-//Texture2D g_samplerDisplacementMap;
-//SamplerState LinearSampler;
-
 // Immutable
 uint g_ActualDim;
 uint g_InWidth;
@@ -33,13 +29,8 @@ uint g_OutHeight;
 uint g_DtxAddressOffset;
 uint g_DtyAddressOffset;
 
-// Changed per frame
-float g_Time;
-float g_ChoppyScale;
-float g_GridLen;
-
 // The following three should contains only real numbers. But we have only C2C FFT now.
-StructuredBuffer<float2>	g_InputDxyz;
+StructuredBuffer<float2> g_InputDxyz;
 
 // Post-FFT data wrap up: Dx, Dy, Dz -> Displacement
 void UpdateDisplacementPS(float2 UV : TEXCOORD0, out float4 OutColor : SV_Target0)
@@ -51,8 +42,8 @@ void UpdateDisplacementPS(float2 UV : TEXCOORD0, out float4 OutColor : SV_Target
 	// cos(pi * (m1 + m2))
 	int sign_correction = ((index_x + index_y) & 1) ? -1 : 1;
 
-	float dx = g_InputDxyz[addr + g_DtxAddressOffset].x * sign_correction * g_ChoppyScale;
-	float dy = g_InputDxyz[addr + g_DtyAddressOffset].x * sign_correction * g_ChoppyScale;
+	float dx = g_InputDxyz[addr + g_DtxAddressOffset].x * sign_correction * VaPerFrameDisp.ChoppyScale;
+	float dy = g_InputDxyz[addr + g_DtyAddressOffset].x * sign_correction * VaPerFrameDisp.ChoppyScale;
 	float dz = g_InputDxyz[addr].x * sign_correction;
 
 	OutColor = float4(dx, dy, dz, 1);
