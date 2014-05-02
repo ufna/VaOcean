@@ -94,7 +94,6 @@ public:
 
 	// Begin UObject Interface
 #if WITH_EDITOR
-	virtual void PostInitProperties() OVERRIDE;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) OVERRIDE;
 	virtual void BeginDestroy() OVERRIDE;
 #endif // WITH_EDITOR
@@ -105,17 +104,6 @@ public:
 	void UpdateDisplacementMap(float WorldTime);
 
 protected:
-
-	//////////////////////////////////////////////////////////////////////////
-	// Render target helpers
-
-	// Displacement map
-	FShaderResourceViewRHIRef m_pDisplacementSRV;
-	FRHIRenderTargetView m_pDisplacementRTV;
-
-	// Gradient field
-	FShaderResourceViewRHIRef m_pGradientSRV;
-	FRHIRenderTargetView m_pGradientRTV;
 
 	//////////////////////////////////////////////////////////////////////////
 	// Parameters that will be send to rendering thread

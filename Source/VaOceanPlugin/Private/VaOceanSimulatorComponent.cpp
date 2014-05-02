@@ -132,23 +132,9 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	RadixCreatePlan(&FFTPlan, 3);
 }
 
-void UVaOceanSimulatorComponent::PostInitProperties()
-{
-	Super::PostInitProperties();
-
-	// Setup render target helpers
-	if (NormalsTarget)
-	{
-		//m_pDisplacementSRV = RHICreateShaderResourceView((FTexture2DRHIRef&)NormalsTarget->GetRenderTargetResource()->TextureRHI, 0, 1, PF_A32B32G32R32F);
-		//m_pDisplacementRTV = FRHIRenderTargetView(NormalsTarget->GetRenderTargetResource()->TextureRHI);
-	}
-}
-
 void UVaOceanSimulatorComponent::BeginDestroy()
 {
 	RadixDestroyPlan(&FFTPlan);
-
-	m_pDisplacementSRV.SafeRelease();
 
 	m_pBuffer_Float2_H0.SafeRelease();
 	m_pUAV_H0.SafeRelease();
@@ -303,7 +289,6 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
 	FUpdateDisplacementPSPerFrame UpdateDisplacementPSPerFrameParams;
-	UpdateDisplacementPSPerFrameParams.g_Time = WorldTime * OceanConfig.TimeScale;
 	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
 	UpdateDisplacementPSPerFrameParams.g_GridLen = OceanConfig.DispMapDimension / OceanConfig.PatchLength;
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
@@ -318,7 +303,6 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FUpdateDisplacementPSPerFrame, PerFrameParams, UpdateDisplacementPSPerFrameParams,
 		{
 			FUpdateDisplacementUniformParameters Parameters;
-			Parameters.Time = PerFrameParams.g_Time;
 			Parameters.ChoppyScale = PerFrameParams.g_ChoppyScale;
 			Parameters.GridLen = PerFrameParams.g_GridLen;
 
@@ -326,7 +310,6 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
 
 			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
-			//RHIClear(true, Color, false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
 			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap());
@@ -340,7 +323,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 			UpdateDisplacementPS->SetParameters(UniformBuffer, PerFrameParams.g_InputDxyz);
 
-			RHIDrawPrimitiveUP(PT_TriangleStrip, 4, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			RHIDrawPrimitiveUP(PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
 
 			UpdateDisplacementPS->UnsetParameters();
 		});

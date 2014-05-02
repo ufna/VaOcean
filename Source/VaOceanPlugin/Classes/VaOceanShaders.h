@@ -319,7 +319,6 @@ public:
 // Post-FFT data wrap up: Dx, Dy, Dz -> Displacement
 
 BEGIN_UNIFORM_BUFFER_STRUCT(FUpdateDisplacementUniformParameters, )
-	DECLARE_UNIFORM_BUFFER_STRUCT_MEMBER(float, Time)
 	DECLARE_UNIFORM_BUFFER_STRUCT_MEMBER(float, ChoppyScale)
 	DECLARE_UNIFORM_BUFFER_STRUCT_MEMBER(float, GridLen)
 END_UNIFORM_BUFFER_STRUCT(FUpdateDisplacementUniformParameters)
@@ -337,7 +336,6 @@ struct FUpdateDisplacementPSPerFrame
 	FShaderResourceViewRHIRef g_InputDxyz;
 
 	// Used to pass params into render thread
-	float g_Time;
 	float g_ChoppyScale;
 	float g_GridLen;
 };
@@ -431,3 +429,94 @@ private:
 	FShaderResourceParameter InputDxyz;
 
 };
+
+
+/**
+ * Displacement -> Normal, Folding
+ */
+class FGenGradientFoldingPS : public FGlobalShader
+{
+	DECLARE_SHADER_TYPE(FGenGradientFoldingPS, Global)
+
+public:
+	static bool ShouldCache(EShaderPlatform Platform)
+	{
+		return IsFeatureLevelSupported(Platform, ERHIFeatureLevel::SM5);
+	}
+
+	FGenGradientFoldingPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		ActualDim.Bind(Initializer.ParameterMap, TEXT("g_ActualDim"));
+		InWidth.Bind(Initializer.ParameterMap, TEXT("g_InWidth"));
+		OutWidth.Bind(Initializer.ParameterMap, TEXT("g_OutWidth"));
+		OutHeight.Bind(Initializer.ParameterMap, TEXT("g_OutHeight"));
+		DtxAddressOffset.Bind(Initializer.ParameterMap, TEXT("g_DtxAddressOffset"));
+		DtyAddressOffset.Bind(Initializer.ParameterMap, TEXT("g_DtyAddressOffset"));
+
+		DisplacementMap.Bind(Initializer.ParameterMap, TEXT("DisplacementMap"));
+		DisplacementMapSampler.Bind(Initializer.ParameterMap, TEXT("DisplacementMapSampler"));
+	}
+
+	FGenGradientFoldingPS()
+	{
+	}
+
+	void SetParameters(
+		uint32 ParamActualDim,
+		uint32 ParamInWidth,
+		uint32 ParamOutWidth,
+		uint32 ParamOutHeight,
+		uint32 ParamDtxAddressOffset,
+		uint32 ParamDtyAddressOffset
+		)
+	{
+		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
+
+		SetShaderValue(PixelShaderRHI, ActualDim, ParamActualDim);
+		SetShaderValue(PixelShaderRHI, InWidth, ParamInWidth);
+		SetShaderValue(PixelShaderRHI, OutWidth, ParamOutWidth);
+		SetShaderValue(PixelShaderRHI, OutHeight, ParamOutHeight);
+		SetShaderValue(PixelShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
+		SetShaderValue(PixelShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
+	}
+
+	void SetParameters(
+		const FUpdateDisplacementUniformBufferRef& UniformBuffer,
+		FTextureRHIParamRef DisplacementMapRHI
+		)
+	{
+		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
+
+		SetUniformBufferParameter(PixelShaderRHI, GetUniformBufferParameter<FUpdateDisplacementUniformParameters>(), UniformBuffer);
+
+		FSamplerStateRHIParamRef SamplerStateLinear = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+		SetTextureParameter(PixelShaderRHI, DisplacementMap, DisplacementMapSampler, SamplerStateLinear, DisplacementMapRHI);
+	}
+
+	void UnsetParameters() {}
+
+	virtual bool Serialize(FArchive& Ar)
+	{
+		bool bShaderHasOutdatedParameters = FGlobalShader::Serialize(Ar);
+		Ar << ActualDim << InWidth << OutWidth << OutHeight << DtxAddressOffset << DtyAddressOffset
+			<< DisplacementMap << DisplacementMapSampler;
+
+		return bShaderHasOutdatedParameters;
+	}
+
+private:
+	// Immutable
+	FShaderParameter ActualDim;
+	FShaderParameter InWidth;
+	FShaderParameter OutWidth;
+	FShaderParameter OutHeight;
+	FShaderParameter DtxAddressOffset;
+	FShaderParameter DtyAddressOffset;
+
+	// Displacement map
+	FShaderResourceParameter DisplacementMap;
+	FShaderResourceParameter DisplacementMapSampler;
+
+};
+

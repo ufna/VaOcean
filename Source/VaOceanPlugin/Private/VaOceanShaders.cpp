@@ -8,6 +8,7 @@ IMPLEMENT_SHADER_TYPE(, FRadix008A_CS2, TEXT("VaOcean_FFT"), TEXT("Radix008A_CS2
 
 IMPLEMENT_SHADER_TYPE(, FQuadVS, TEXT("VaOcean_VS_PS"), TEXT("QuadVS"), SF_Vertex);
 IMPLEMENT_SHADER_TYPE(, FUpdateDisplacementPS, TEXT("VaOcean_VS_PS"), TEXT("UpdateDisplacementPS"), SF_Pixel);
+IMPLEMENT_SHADER_TYPE(, FGenGradientFoldingPS, TEXT("VaOcean_VS_PS"), TEXT("GenGradientFoldingPS"), SF_Pixel);
 
 IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateSpectrumUniformParameters, TEXT("VaPerFrameSp"));
 IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateDisplacementUniformParameters, TEXT("VaPerFrameDisp"));
