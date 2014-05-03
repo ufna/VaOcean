@@ -2,13 +2,14 @@
     "FileVersion" : 1,
 	
 	"FriendlyName" : "VaOcean",
-	"Version" : 4,
-	"VersionName" : "0.4-a4",
+	"Version" : 5,
+	"VersionName" : "0.4-a5",
 	"CreatedBy" : "Vladimir Alyamkin",
 	"CreatedByURL" : "http://ufna.ru",
 	"EngineVersion" : 1579795,
 	"Description" : "Ocean Surface Simulation",
 	"Category" : "Environment",
+	"CanContainContent" : true,
 	
     "Modules" :
 	[
