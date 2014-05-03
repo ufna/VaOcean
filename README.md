@@ -37,6 +37,18 @@ Ocean material shader is quite simple, and can be easily extended to fit your re
 Futher improvements are on the way! Energy-based foam, physics body reaction (like FluidSurface in UE3/UDK), splashes and bursts, rigid body swimming simulation and even more!
 
 
+Installation
+------------
+
+1. Download the **plugin binaries** for the [latest release](https://github.com/ufna/VaOcean/releases/tag/0.4-a6): [VaOceanBinaries.7z](https://github.com/ufna/VaOcean/releases/download/0.4-a6/VaOceanBinaries.7z).
+1. **Make a "Plugins" folder** under your game project directory, then copy plugin binaries to any subdirectory under "Plugins".
+1. **Copy global shaders** from *Shaders/* plugin directory to your engine installation shaders directory (f.e. *./Unreal Engine/4.1/Engine/Shaders*).
+1. **Compile your game project** normally. Unreal Build Tool will detect the plugins and compile them as dependencies to your game.
+1. **Launch the editor** (or the game). Plugin will be initially disabled, but you can turn it on in the editor UI.
+1. **Open the Plugins Editor** (Window -> Plugins), search for VaOcean plugin (you can find it in the **Environment** section) and enable it by clicking the check box.
+1. **Restart the Editor**. The plugin will be automatically loaded at startup.
+
+
 Legal info
 ----------
 
