@@ -29,7 +29,7 @@ Some key things you should know about the VaOcean:
 
 Ocean material shader is quite simple, and can be easily extended to fit your requirements. Current shading components:
 
-* Water body color: using near, mid and fat color mixed by Fresnel term
+* Water body color: using near, mid and far color mixed by Fresnel term
 * Perlin distance-based noise applied both to normals and displacement to remove pattern tiling artifacts
 * UE4 screen-space dynamic reflections. It's not the best way to handle a reflection for waves, but the only one we can use with dynamic objects like warships and VFXs now
 * Waves **subsurface scattering**, based on fake LightVector. To use it right way, you should pass your scene's sun location vector to material instance via blueprints.
