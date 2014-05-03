@@ -14,7 +14,7 @@ struct FOceanData
 	GENERATED_USTRUCT_BODY()
 
 	/** The size of displacement map. Must be power of 2. */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
+	UPROPERTY(BlueprintReadOnly, Category = Ocean)
 	int32 DispMapDimension;
 
 	/** The side length (world space) of square patch. Typical value is 1000 ~ 2000. */
@@ -46,10 +46,10 @@ struct FOceanData
 	UPROPERTY(EditDefaultsOnly, Category = Ocean)
 	float ChoppyScale;
 
-	/** defaults */
+	/** Defaults */
 	FOceanData()
 	{
-		DispMapDimension = 512;
+		DispMapDimension = 512;		// Not editable because of FFT shader config
 		PatchLength = 2000.0f;
 		TimeScale = 0.8f;
 		WaveAmplitude = 0.35f;
@@ -70,11 +70,11 @@ class UVaOceanSimulatorComponent : public UActorComponent
 
 	/** Render target for normal map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* NormalsTarget;
+	class UTextureRenderTarget2D* DisplacementTarget;
 
 	/** Render target for height map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* HeightTarget;
+	class UTextureRenderTarget2D* GradientTarget;
 
 protected:
 	/** Ocean spectrum data */
@@ -85,7 +85,7 @@ protected:
 	void InitHeightMap(FOceanData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega);
 
 	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
-		FStructuredBufferRHIRef& ppBuffer, FUnorderedAccessViewRHIRef& ppUAV, FShaderResourceViewRHIRef& ppSRV);
+		FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
 
 public:
 	// Begin UActorComponent Interface
@@ -133,5 +133,10 @@ protected:
 	FStructuredBufferRHIRef m_pBuffer_Float_Dxyz;
 	FUnorderedAccessViewRHIRef m_pUAV_Dxyz;
 	FShaderResourceViewRHIRef m_pSRV_Dxyz;
+
+	FVector4 m_pQuadVB[4];
+
+	// FFT wrap-up
+	FRadixPlan512 FFTPlan;
 
 };
