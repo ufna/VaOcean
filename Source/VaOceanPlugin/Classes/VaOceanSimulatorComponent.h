@@ -93,9 +93,9 @@ public:
 	// End UActorComponent Interface
 
 	// Begin UObject Interface
+	virtual void BeginDestroy() OVERRIDE;
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) OVERRIDE;
-	virtual void BeginDestroy() OVERRIDE;
 #endif // WITH_EDITOR
 	// End UObject Interface
 
