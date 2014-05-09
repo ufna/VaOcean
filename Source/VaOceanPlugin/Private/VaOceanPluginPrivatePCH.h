@@ -12,7 +12,7 @@
 // add includes for headers that are used in most of your module's source files though.
 #include "ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogVaOcean, Log, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogVaOcean, Log, All);
 
 #include "IVaOceanPlugin.h"
 
