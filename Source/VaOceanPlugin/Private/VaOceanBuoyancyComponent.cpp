@@ -203,7 +203,11 @@ FLinearColor UVaOceanBuoyancyComponent::GetSurfaceNormal(FVector& WorldLocation)
 
 int32 UVaOceanBuoyancyComponent::GetSurfaceWavesNum() const
 {
-	// deprectated and should be removed
+	if (OceanStateActor.IsValid())
+	{
+		return OceanStateActor->GetOceanWavesNum();
+	}
+
 	return 1;
 }
 

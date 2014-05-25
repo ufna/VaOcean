@@ -23,3 +23,4 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVaOceanPhysics, Log, All);
 #include "VaOceanSimulatorComponent.h"
 #include "VaOceanBuoyancyComponent.h"
 #include "VaOceanStateActor.h"
+#include "VaOceanStateActorSimple.h"

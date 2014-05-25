@@ -38,20 +38,23 @@ class AVaOceanStateActor : public AActor
 
 	/** Set global zero ocean level (ocean mesh Z location) */
 	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
-	void SetGlobalOceanLevel(float OceanLevel);
+	virtual void SetGlobalOceanLevel(float OceanLevel);
 
 	/** Global zero ocean level (ocean mesh Z location) */
 	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetGlobalOceanLevel() const;
 
 	/** Get ocean level at desired position */
-	float GetOceanLevelAtLocation(FVector& Location) const;
+	virtual float GetOceanLevelAtLocation(FVector& Location) const;
 
 	/** Get ocean surface normal at desired location */
-	FLinearColor GetOceanSurfaceNormal(FVector& Location) const;
+	virtual FLinearColor GetOceanSurfaceNormal(FVector& Location) const;
 
 	/** Wave velocity is determined by UV change rate */
-	FVector GetOceanWaveVelocity(FVector& Location) const;
+	virtual FVector GetOceanWaveVelocity(FVector& Location) const;
+
+	/** How much waves are defined by normal map */
+	virtual int32 GetOceanWavesNum() const;
 
 	// Begin AActor interface
 	virtual void PreInitializeComponents() OVERRIDE;

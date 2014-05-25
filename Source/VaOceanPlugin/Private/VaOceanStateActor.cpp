@@ -92,6 +92,10 @@ FVector AVaOceanStateActor::GetOceanWaveVelocity(FVector& Location) const
 	return FVector::UpVector;
 }
 
+int32 AVaOceanStateActor::GetOceanWavesNum() const
+{
+	return 1;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Parameters access (get/set)
