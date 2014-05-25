@@ -20,3 +20,4 @@ class FVaOceanPlugin : public IVaOceanPlugin
 IMPLEMENT_MODULE( FVaOceanPlugin, VaOceanPlugin )
 
 DEFINE_LOG_CATEGORY(LogVaOcean);
+DEFINE_LOG_CATEGORY(LogVaOceanPhysics);

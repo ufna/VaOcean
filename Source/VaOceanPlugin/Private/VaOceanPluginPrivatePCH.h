@@ -13,9 +13,13 @@
 #include "ModuleManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVaOcean, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogVaOceanPhysics, Log, All);
 
 #include "IVaOceanPlugin.h"
 
+#include "VaOceanTypes.h"
 #include "VaOceanShaders.h"
 #include "VaOceanRadixFFT.h"
 #include "VaOceanSimulatorComponent.h"
+#include "VaOceanBuoyancyComponent.h"
+#include "VaOceanStateActor.h"
