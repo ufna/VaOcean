@@ -49,7 +49,7 @@ float AVaOceanStateActorSimple::GetOceanLevelAtLocation(FVector& Location) const
 	// Check that we've set a texture
 	if (!OceanHeightMap)
 	{
-		return GetGlobalOceanLevel();
+		return GetGlobalOceanLevel() + WaterHeight;
 	}
 
 #if WITH_EDITORONLY_DATA
@@ -82,7 +82,7 @@ float AVaOceanStateActorSimple::GetOceanLevelAtLocation(FVector& Location) const
 
 	return OceanLevel + GlobalOceanLevel;
 #else
-	return GetGlobalOceanLevel();
+	return GetGlobalOceanLevel() + WaterHeight;
 #endif
 }
 
