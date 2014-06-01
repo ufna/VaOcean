@@ -23,31 +23,31 @@ class AVaOceanStateActorSimple : public AVaOceanStateActor
 	// Simple ocean model API
 
 	/** SKOcean: WorldPositionDivider param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWorldPositionDivider() const;
 
 	/** SKOcean: WaveUVDivider param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWaveUVDivider() const;
 
 	/** SKOcean: WaveHeightPannerX param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWaveHeightPannerX() const;
 
 	/** SKOcean: WaveHeightPannerY param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWaveHeightPannerY() const;
 
 	/** SKOcean: WaveHeight param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWaveHeight() const;
 
 	/** SKOcean: WaterHeight param */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	float GetWaterHeight() const;
 
 	/** Set time for waves movement calculation */
-	UFUNCTION(BlueprintCallable, Category = "World|Ocean")
+	UFUNCTION(BlueprintCallable, Category = "World|VaOcean")
 	void SetWaveHeightPannerTime(float Time);
 
 	/** Normalmap which will be used to determite the wave height */
