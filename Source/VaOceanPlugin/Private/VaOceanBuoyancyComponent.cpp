@@ -5,6 +5,8 @@
 UVaOceanBuoyancyComponent::UVaOceanBuoyancyComponent(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)
 {
+	bWantsInitializeComponent = true;
+
 	Mass = 1500.0f;
 	OceanLevel = 0.0f;
 	// InertiaTensorScale = FVector(1.0f, 0.80f, 1.0f);
@@ -25,31 +27,13 @@ UVaOceanBuoyancyComponent::UVaOceanBuoyancyComponent(const class FPostConstructI
 
 	LongitudinalMetacenter = FVector(0.0f, 0.0f, 150.0f);
 	TransverseMetacenter = FVector(0.0, 0.0, 50.0);
+
+	UpdatedComponent = NULL;
 }
 
-void UVaOceanBuoyancyComponent::Activate(bool bReset)
+void UVaOceanBuoyancyComponent::InitializeComponent()
 {
-	Super::Activate(bReset);
-
-	// Find ocean state actor on scene
-	TActorIterator< AVaOceanStateActor > ActorItr = TActorIterator< AVaOceanStateActor >(GetWorld());
-	while (ActorItr)
-	{
-		OceanStateActor = *ActorItr;
-
-		// Don't look for next actor, we need just one!
-		break;
-		//++ActorItr;
-	}
-
-	if (OceanStateActor.IsValid())
-	{
-		UE_LOG(LogVaOceanPhysics, Log, TEXT("Ocean state successfully found by GameState"));
-	}
-	else
-	{
-		UE_LOG(LogVaOceanPhysics, Warning, TEXT("Can't find ocean state actor! Default ocean level will be used."));
-	}
+	Super::InitializeComponent();
 
 	// Find updated component (mesh of owner)
 	USkeletalMeshComponent* SkeletalMesh = GetOwner()->FindComponentByClass<USkeletalMeshComponent>();
@@ -71,6 +55,26 @@ void UVaOceanBuoyancyComponent::Activate(bool bReset)
 	{
 		UE_LOG(LogVaOceanPhysics, Warning, TEXT("Can't find updated component for bouyancy actor!"));
 	}
+
+	// Find ocean state actor on scene
+	TActorIterator< AVaOceanStateActor > ActorItr = TActorIterator< AVaOceanStateActor >(GetWorld());
+	while (ActorItr)
+	{
+		OceanStateActor = *ActorItr;
+
+		// Don't look for next actor, we need just one!
+		break;
+		//++ActorItr;
+	}
+
+	if (OceanStateActor.IsValid())
+	{
+		UE_LOG(LogVaOceanPhysics, Log, TEXT("Ocean state successfully found by GameState"));
+	}
+	else
+	{
+		UE_LOG(LogVaOceanPhysics, Warning, TEXT("Can't find ocean state actor! Default ocean level will be used."));
+	}
 }
 
 void UVaOceanBuoyancyComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -88,16 +92,19 @@ void UVaOceanBuoyancyComponent::TickComponent(float DeltaTime, enum ELevelTick T
 
 void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 {
-	if (!UpdatedComponent)
+	AActor* MyOwner = GetOwner();
+
+	if (!UpdatedComponent || MyOwner == NULL)
 	{
 		return;
 	}
 
-	const FVector OldLocation = PawnOwner->GetActorLocation();
-	const FRotator OldRotation = PawnOwner->GetActorRotation();
+	const FVector OldLocation = MyOwner->GetActorLocation();
+	const FRotator OldRotation = MyOwner->GetActorRotation();
 	const FVector OldLinearVelocity = UpdatedComponent->GetPhysicsLinearVelocity();
 	const FVector OldAngularVelocity = UpdatedComponent->GetPhysicsAngularVelocity();
 	const FVector OldCenterOfMassWorld = OldLocation + OldRotation.RotateVector(COMOffset);
+	const FVector OwnerScale = MyOwner->GetActorScale();
 
 	// XYZ === Throttle, Steering, Rise == Forwards, Sidewards, Upwards
 	FVector X, Y, Z;
@@ -137,6 +144,9 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 		// Scale to DeltaTime to break FPS addiction
 		WaveForce *= DeltaTime;
 
+		// Apply actor scale
+		WaveForce *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
+
 		UpdatedComponent->AddForceAtLocation(WaveForce * Mass, TensionDotWorld);
 	}
 
@@ -161,6 +171,7 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 
 		// Apply torque
 		TensionTorqueResult *= DeltaTime;
+		TensionTorqueResult *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
 		UpdatedComponent->AddTorque(TensionTorqueResult);
 	}
 }

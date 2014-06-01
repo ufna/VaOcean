@@ -9,7 +9,7 @@
  * Allows actor to swim in ocean
  */
 UCLASS(ClassGroup = Environment, editinlinenew, meta = (BlueprintSpawnableComponent))
-class UVaOceanBuoyancyComponent : public UPawnMovementComponent
+class UVaOceanBuoyancyComponent : public UMovementComponent
 {
 	GENERATED_UCLASS_BODY()
 
@@ -27,7 +27,7 @@ class UVaOceanBuoyancyComponent : public UPawnMovementComponent
 	FVector COMOffset;
 	
 	//Begin UActorComponent Interface
-	virtual void Activate(bool bReset = false) OVERRIDE;
+	virtual void InitializeComponent() OVERRIDE;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) OVERRIDE;
 	//End UActorComponent Interface
 
