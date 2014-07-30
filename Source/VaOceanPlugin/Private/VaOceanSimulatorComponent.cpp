@@ -121,6 +121,7 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	RadixCreatePlan(&FFTPlan, 3);
 }
 
+#if WITH_EDITOR
 void UVaOceanSimulatorComponent::BeginDestroy()
 {
 	RadixDestroyPlan(&FFTPlan);
@@ -143,6 +144,7 @@ void UVaOceanSimulatorComponent::BeginDestroy()
 
 	Super::BeginDestroy();
 }
+#endif //WITH_EDITOR
 
 void UVaOceanSimulatorComponent::InitHeightMap(FOceanData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
 {
