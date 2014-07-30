@@ -13,10 +13,10 @@ class AVaOceanStateActorSimple : public AVaOceanStateActor
 	GENERATED_UCLASS_BODY()
 
 	// Begin AVaOceanStateActor interface
-	virtual float GetOceanLevelAtLocation(FVector& Location) const OVERRIDE;
-	virtual FLinearColor GetOceanSurfaceNormal(FVector& Location) const OVERRIDE;
-	virtual FVector GetOceanWaveVelocity(FVector& Location) const OVERRIDE;
-	int32 GetOceanWavesNum() const OVERRIDE;
+	virtual float GetOceanLevelAtLocation(FVector& Location) const override;
+	virtual FLinearColor GetOceanSurfaceNormal(FVector& Location) const override;
+	virtual FVector GetOceanWaveVelocity(FVector& Location) const override;
+	int32 GetOceanWavesNum() const override;
 	// End AVaOceanStateActor interface
 
 	//////////////////////////////////////////////////////////////////////////
@@ -59,7 +59,7 @@ class AVaOceanStateActorSimple : public AVaOceanStateActor
 	int32 HeightMapWaves;
 
 	// Begin AActor interface
-	virtual void PostInitializeComponents() OVERRIDE;
+	virtual void PostInitializeComponents() override;
 	// End AActor interface
 
 protected:

@@ -22,13 +22,13 @@ class UVaOceanBuoyancyComponent : public UMovementComponent
 	UPROPERTY(EditAnywhere, Category = VehicleSetup)
 	float OceanLevel;
 
-	/** Override center of mass offset, makes tweaking easier [uu] */
+	/** override center of mass offset, makes tweaking easier [uu] */
 	UPROPERTY(EditAnywhere, Category = VehicleSetup, AdvancedDisplay)
 	FVector COMOffset;
 	
 	//Begin UActorComponent Interface
-	virtual void InitializeComponent() OVERRIDE;
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) OVERRIDE;
+	virtual void InitializeComponent() override;
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	//End UActorComponent Interface
 
 protected:
