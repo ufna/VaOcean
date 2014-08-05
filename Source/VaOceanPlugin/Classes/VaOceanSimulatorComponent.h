@@ -23,6 +23,10 @@ class UVaOceanSimulatorComponent : public UActorComponent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
 	class UTextureRenderTarget2D* DisplacementTarget;
 
+	/** Render target for normal map that can be used by the editor */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
+	class UTextureRenderTarget2D* ResultantTexture;
+
 	/** Render target for height map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
 	class UTextureRenderTarget2D* GradientTarget;
@@ -52,7 +56,9 @@ public:
 	/** Update normals and heightmap from spectrum */
 	void UpdateContent();
 	void UpdateDisplacementMap(float WorldTime);
+	void UpdateDisplacementArray();
 
+	float GetOceanLevelAtLocation(FVector& Location) const;
 protected:
 
 	//////////////////////////////////////////////////////////////////////////
@@ -63,7 +69,6 @@ protected:
 
 	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
 		FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
-
 
 	//////////////////////////////////////////////////////////////////////////
 	// Parameters that will be send to rendering thread
@@ -99,4 +104,9 @@ protected:
 	// FFT wrap-up
 	FRadixPlan512 FFTPlan;
 
+
+	// Data for querying the ocean
+	TArray<FFloat16Color> ColorBuffer;
+
+	virtual FFloat16Color GetHeightMapPixelColor(float U, float V) const;
 };
