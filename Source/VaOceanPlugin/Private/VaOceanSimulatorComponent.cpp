@@ -232,6 +232,7 @@ void UVaOceanSimulatorComponent::TickComponent(float DeltaTime, enum ELevelTick 
 void UVaOceanSimulatorComponent::UpdateContent()
 {
 	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
+	UpdateDisplacementArray();
 }
 
 /** Vertex declaration for the fullscreen 2D quad */
@@ -390,4 +391,68 @@ FLinearColor UVaOceanSimulatorComponent::GetDisplacementColor(int32 X, int32 Y) 
 FLinearColor UVaOceanSimulatorComponent::GetGradientColor(int32 X, int32 Y) const
 {
 	return FLinearColor::Black;
+}
+
+float UVaOceanSimulatorComponent::GetOceanLevelAtLocation(FVector& Location) const
+{
+	// TODO: expose these variables
+	float WorldUVx = Location.X / 2048.0f;
+	float WorldUVy = Location.Y / 2048.0f;
+
+	FFloat16Color PixelColour = GetHeightMapPixelColor(WorldUVx, WorldUVy);
+
+	return PixelColour.B;
+}
+
+void UVaOceanSimulatorComponent::UpdateDisplacementArray()
+{
+	ColorBuffer.Reset();
+
+	if (DisplacementTarget)
+	{
+		FTextureRenderTarget2DResource* textureResource = (FTextureRenderTarget2DResource*)ResultantTexture->Resource;
+		if (textureResource->ReadFloat16Pixels(ColorBuffer))
+		{
+
+		}
+		else
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Error reading texture resource"));
+			}
+		}
+	}
+}
+
+FFloat16Color UVaOceanSimulatorComponent::GetHeightMapPixelColor(float U, float V) const
+{
+	// Check we have a raw data loaded
+	if (ColorBuffer.Num() == 0)
+	{
+		//UE_LOG(LogVaOcean, Warning, TEXT("Ocean heightmap raw data is not loaded! Pixel is empty."));
+		return FFloat16Color(FColor::Black);
+	}
+
+#if WITH_EDITORONLY_DATA
+	// We are using the source art so grab the original width/height
+	FTextureRenderTarget2DResource* textureResource = (FTextureRenderTarget2DResource*)ResultantTexture->Resource;
+	const int32 Width = textureResource->GetSizeXY().X;
+	const int32 Height = textureResource->GetSizeXY().Y;
+	const bool bUseSRGB = ResultantTexture->SRGB;
+
+	check(Width > 0 && Height > 0 && ColorBuffer.Num() > 0);
+
+	// Normalize UV first
+	const float NormalizedU = U > 0 ? FMath::Fractional(U) : 1.0 + FMath::Fractional(U);
+	const float NormalizedV = V > 0 ? FMath::Fractional(V) : 1.0 + FMath::Fractional(V);
+
+	const int PixelX = NormalizedU * (Width - 1) + 1;
+	const int PixelY = NormalizedV * (Height - 1) + 1;
+
+	// Get color from
+	return ColorBuffer[(PixelY - 1) * Width + PixelX - 1];
+#else
+	return FFloat16Color(FColor::Black);
+#endif
 }

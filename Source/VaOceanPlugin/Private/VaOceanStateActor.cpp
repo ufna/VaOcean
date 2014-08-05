@@ -48,6 +48,9 @@ AVaOceanStateActor::AVaOceanStateActor(const class FPostConstructInitializePrope
 #endif // WITH_EDITORONLY_DATA
 
 	OceanSimulator = NULL;
+
+	// Enable to see debug spheres
+	//PrimaryActorTick.bCanEverTick = true;
 }
 
 void AVaOceanStateActor::PreInitializeComponents()
@@ -74,6 +77,11 @@ const FSpectrumData& AVaOceanStateActor::GetSpectrumConfig() const
 float AVaOceanStateActor::GetOceanLevelAtLocation(FVector& Location) const
 {
 	// @TODO Get altitute from ocean simulation component
+
+	if (OceanSimulator)
+	{
+		return OceanSimulator->GetOceanLevelAtLocation(Location);
+	}
 
 	return GetGlobalOceanLevel();
 }
@@ -108,4 +116,20 @@ void AVaOceanStateActor::SetGlobalOceanLevel(float OceanLevel)
 float AVaOceanStateActor::GetGlobalOceanLevel() const
 {
 	return GlobalOceanLevel;
+}
+
+void AVaOceanStateActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// draw debug speheres
+	/*for (int i = -5; i < 5; ++i)
+	{
+		for (int j = -5; j < 5; ++j)
+		{
+			FVector SpherePoint = FVector(250.0f * i, 250.0f * j, 0.0f);
+			float OceanHeight = GetOceanLevelAtLocation(SpherePoint);
+			DrawDebugSphere(GetWorld(), SpherePoint + (FVector::UpVector * OceanHeight), 10.0f, 4, FColor::White, false, -1.0f, 0);
+		}
+	}*/
 }

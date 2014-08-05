@@ -59,6 +59,8 @@ class AVaOceanStateActor : public AActor
 	// Begin AActor interface
 	virtual void PreInitializeComponents() OVERRIDE;
 	virtual void PostInitializeComponents() OVERRIDE;
+
+	virtual void Tick(float DeltaSeconds) OVERRIDE;
 	// End AActor interface
 
 protected:
