@@ -3,11 +3,11 @@
 	
 	"FriendlyName" : "VaOcean",
 	"Version" : 6,
-	"VersionName" : "0.4-a6",
+	"VersionName" : "0.4-a6 Hotfix 1",
 	"CreatedBy" : "Vladimir Alyamkin",
-	"CreatedByURL" : "http://ufna.ru",
+	"CreatedByURL" : "http://alyamkin.com",
 	"EngineVersion" : 1579795,
-	"Description" : "Ocean surface simulation",
+	"Description" : "Ocean surface simulation plugin",
 	"Category" : "Environment",
 	"CanContainContent" : true,
 	
