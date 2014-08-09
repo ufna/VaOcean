@@ -7,59 +7,6 @@
 
 #define PAD16(n) (((n)+15)/16*16)
 
-/** Phillips spectrum configuration */
-USTRUCT()
-struct FOceanData
-{
-	GENERATED_USTRUCT_BODY()
-
-	/** The size of displacement map. Must be power of 2. */
-	UPROPERTY(BlueprintReadOnly, Category = Ocean)
-	int32 DispMapDimension;
-
-	/** The side length (world space) of square patch. Typical value is 1000 ~ 2000. */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float PatchLength;
-
-	/** Adjust the time interval for simulation (controls the simulation speed) */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float TimeScale;
-
-	/** Amplitude for transverse wave. Around 1.0 (not the world space height). */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float WaveAmplitude;
-
-	/** Wind direction. Normalization not required */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	FVector2D WindDirection;
-
-	/** The bigger the wind speed, the larger scale of wave crest. But the wave scale can be no larger than PatchLength. 
-		Around 100 ~ 1000 */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float WindSpeed;
-
-	/** This value damps out the waves against the wind direction. Smaller value means higher wind dependency. */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float WindDependency;
-
-	/** The amplitude for longitudinal wave. Higher value creates pointy crests. Must be positive. */
-	UPROPERTY(EditDefaultsOnly, Category = Ocean)
-	float ChoppyScale;
-
-	/** Defaults */
-	FOceanData()
-	{
-		DispMapDimension = 512;		// Not editable because of FFT shader config
-		PatchLength = 2000.0f;
-		TimeScale = 0.8f;
-		WaveAmplitude = 0.35f;
-		WindDirection = FVector2D(0.8f, 0.6f);
-		WindSpeed = 600.0f;
-		WindDependency = 0.07f;
-		ChoppyScale = 1.3f;
-	}
-};
-
 /**
  * Renders normals and heightmap from Phillips spectrum
  */
@@ -67,6 +14,10 @@ UCLASS(ClassGroup=Environment, editinlinenew, meta=(BlueprintSpawnableComponent)
 class UVaOceanSimulatorComponent : public UActorComponent
 {
 	GENERATED_UCLASS_BODY()
+
+	/** Reference to actor that keeps spectrum configuration */
+	UPROPERTY(BlueprintReadOnly, Category = OceanState)
+	class AVaOceanStateActor *StateActor;
 
 	/** Render target for normal map that can be used by the editor */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
@@ -76,26 +27,25 @@ class UVaOceanSimulatorComponent : public UActorComponent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
 	class UTextureRenderTarget2D* GradientTarget;
 
-protected:
-	/** Ocean spectrum data */
-	UPROPERTY(EditDefaultsOnly, Category = Config)
-	FOceanData OceanConfig;
+	//////////////////////////////////////////////////////////////////////////
+	// Buffered data access API
 
-	/** Initialize the vector field */
-	void InitHeightMap(FOceanData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega);
+	/** Displacement value from XY pixel */
+	FLinearColor GetDisplacementColor(int32 X, int32 Y) const;
 
-	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
-		FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
+	/** Normals value from XY pixel */
+	FLinearColor GetGradientColor(int32 X, int32 Y) const;
 
 public:
 	// Begin UActorComponent Interface
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) OVERRIDE;
+	virtual void InitializeComponent() override;
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 	// End UActorComponent Interface
 
 	// Begin UObject Interface
+	virtual void BeginDestroy() override;
 #if WITH_EDITOR
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) OVERRIDE;
-	virtual void BeginDestroy() OVERRIDE;
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif // WITH_EDITOR
 	// End UObject Interface
 
@@ -104,6 +54,16 @@ public:
 	void UpdateDisplacementMap(float WorldTime);
 
 protected:
+
+	//////////////////////////////////////////////////////////////////////////
+	// Spectrum initialization
+
+	/** Initialize the vector field */
+	void InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega);
+
+	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
+		FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// Parameters that will be send to rendering thread

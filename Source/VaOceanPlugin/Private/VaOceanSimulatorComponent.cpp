@@ -60,6 +60,7 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 : Super(PCIP)
 {
 	bAutoActivate = true;
+	bWantsInitializeComponent = true;
 	PrimaryComponentTick.bCanEverTick = true;
 	//PrimaryComponentTick.TickGroup = TG_DuringPhysics;
 
@@ -69,8 +70,44 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	m_pQuadVB[2].Set( 1.0f, -1.0f, 0.0f, 1.0f);
 	m_pQuadVB[3].Set( 1.0f,  1.0f, 0.0f, 1.0f);
 
+	// Be sure that there'is no garbede in it
+	StateActor = nullptr;
+}
+
+void UVaOceanSimulatorComponent::BeginDestroy()
+{
+	RadixDestroyPlan(&FFTPlan);
+
+	m_pBuffer_Float2_H0.SafeRelease();
+	m_pUAV_H0.SafeRelease();
+	m_pSRV_H0.SafeRelease();
+
+	m_pBuffer_Float_Omega.SafeRelease();
+	m_pUAV_Omega.SafeRelease();
+	m_pSRV_Omega.SafeRelease();
+
+	m_pBuffer_Float2_Ht.SafeRelease();
+	m_pUAV_Ht.SafeRelease();
+	m_pSRV_Ht.SafeRelease();
+
+	m_pBuffer_Float_Dxyz.SafeRelease();
+	m_pUAV_Dxyz;
+	m_pSRV_Dxyz;
+
+	Super::BeginDestroy();
+}
+
+void UVaOceanSimulatorComponent::InitializeComponent()
+{
+	StateActor = Cast<AVaOceanStateActor>(GetOwner());
+	if (StateActor == NULL)
+	{
+		UE_LOG(LogVaOcean, Warning, TEXT("Simulator component should belong to VaOceanStateActor only!"));
+		return;
+	}
+
 	// Cache shader immutable parameters (looks ugly, but nicely used then)
-	UpdateSpectrumCSImmutableParams.g_ActualDim = OceanConfig.DispMapDimension;
+	UpdateSpectrumCSImmutableParams.g_ActualDim = StateActor->GetSpectrumConfig().DispMapDimension;
 	UpdateSpectrumCSImmutableParams.g_InWidth = UpdateSpectrumCSImmutableParams.g_ActualDim + 4;
 	UpdateSpectrumCSImmutableParams.g_OutWidth = UpdateSpectrumCSImmutableParams.g_ActualDim;
 	UpdateSpectrumCSImmutableParams.g_OutHeight = UpdateSpectrumCSImmutableParams.g_ActualDim;
@@ -78,14 +115,14 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	UpdateSpectrumCSImmutableParams.g_DtyAddressOffset = FMath::Square(UpdateSpectrumCSImmutableParams.g_ActualDim) * 2;
 
 	// Height map H(0)
-	int32 height_map_size = (OceanConfig.DispMapDimension + 4) * (OceanConfig.DispMapDimension + 1);
+	int32 height_map_size = (StateActor->GetSpectrumConfig().DispMapDimension + 4) * (StateActor->GetSpectrumConfig().DispMapDimension + 1);
 	TResourceArray<FVector2D> h0_data;
 	h0_data.Init(FVector2D::ZeroVector, height_map_size);
 	TResourceArray<float> omega_data;
 	omega_data.Init(0.0f, height_map_size);
-	InitHeightMap(OceanConfig, h0_data, omega_data);
+	InitHeightMap(StateActor->GetSpectrumConfig(), h0_data, omega_data);
 
-	int hmap_dim = OceanConfig.DispMapDimension;
+	int hmap_dim = StateActor->GetSpectrumConfig().DispMapDimension;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
 	// This value should be (hmap_dim / 2 + 1) * hmap_dim, but we use full sized buffer here for simplicity.
 	int input_half_size = hmap_dim * hmap_dim;
@@ -121,30 +158,7 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstruc
 	RadixCreatePlan(&FFTPlan, 3);
 }
 
-void UVaOceanSimulatorComponent::BeginDestroy()
-{
-	RadixDestroyPlan(&FFTPlan);
-
-	m_pBuffer_Float2_H0.SafeRelease();
-	m_pUAV_H0.SafeRelease();
-	m_pSRV_H0.SafeRelease();
-
-	m_pBuffer_Float_Omega.SafeRelease();
-	m_pUAV_Omega.SafeRelease();
-	m_pSRV_Omega.SafeRelease();
-
-	m_pBuffer_Float2_Ht.SafeRelease();
-	m_pUAV_Ht.SafeRelease();
-	m_pSRV_Ht.SafeRelease();
-
-	m_pBuffer_Float_Dxyz.SafeRelease();
-	m_pUAV_Dxyz;
-	m_pSRV_Dxyz;
-
-	Super::BeginDestroy();
-}
-
-void UVaOceanSimulatorComponent::InitHeightMap(FOceanData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
+void UVaOceanSimulatorComponent::InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
 {
 	int32 i, j;
 	FVector2D K, Kn;
@@ -189,7 +203,10 @@ void UVaOceanSimulatorComponent::InitHeightMap(FOceanData& Params, TResourceArra
 void UVaOceanSimulatorComponent::CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
 	FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV)
 {
-	*ppBuffer = RHICreateStructuredBuffer(byte_stride, Data->GetResourceDataSize(), Data, (BUF_UnorderedAccess | BUF_ShaderResource));
+	FRHIResourceCreateInfo ResourceCreateInfo;
+	ResourceCreateInfo.ResourceArray = Data;
+	*ppBuffer = RHICreateStructuredBuffer(byte_stride, Data->GetResourceDataSize(), (BUF_UnorderedAccess | BUF_ShaderResource), ResourceCreateInfo);
+
 	*ppUAV = RHICreateUnorderedAccessView(*ppBuffer, false, false);
 	*ppSRV = RHICreateShaderResourceView(*ppBuffer);
 }
@@ -225,13 +242,13 @@ TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
 
 void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 {
-	if (DisplacementTarget == NULL || GradientTarget == NULL)
+	if (StateActor == NULL || DisplacementTarget == NULL || GradientTarget == NULL)
 		return;
 	
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 	FUpdateSpectrumCSPerFrame UpdateSpectrumCSPerFrameParams;
-	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * OceanConfig.TimeScale;
-	UpdateSpectrumCSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
+	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * StateActor->GetSpectrumConfig().TimeScale;
+	UpdateSpectrumCSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
 	UpdateSpectrumCSPerFrameParams.m_pSRV_H0 = m_pSRV_H0;
 	UpdateSpectrumCSPerFrameParams.m_pSRV_Omega = m_pSRV_Omega;
 	UpdateSpectrumCSPerFrameParams.m_pUAV_Ht = m_pUAV_Ht;
@@ -245,24 +262,24 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 			Parameters.Time = PerFrameParams.g_Time;
 
 			FUpdateSpectrumUniformBufferRef UniformBuffer = 
-				FUpdateSpectrumUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+				FUpdateSpectrumUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
 			TShaderMapRef<FUpdateSpectrumCS> UpdateSpectrumCS(GetGlobalShaderMap());
-			RHISetComputeShader(UpdateSpectrumCS->GetComputeShader());
+			RHICmdList.SetComputeShader(UpdateSpectrumCS->GetComputeShader());
 
-			UpdateSpectrumCS->SetParameters(ImmutableParams.g_ActualDim,
+			UpdateSpectrumCS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
 				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
 				ImmutableParams.g_DtxAddressOffset, ImmutableParams.g_DtyAddressOffset);
 
-			UpdateSpectrumCS->SetParameters(UniformBuffer, PerFrameParams.m_pSRV_H0, PerFrameParams.m_pSRV_Omega);
-			UpdateSpectrumCS->SetOutput(PerFrameParams.m_pUAV_Ht);
+			UpdateSpectrumCS->SetParameters(RHICmdList, UniformBuffer, PerFrameParams.m_pSRV_H0, PerFrameParams.m_pSRV_Omega);
+			UpdateSpectrumCS->SetOutput(RHICmdList, PerFrameParams.m_pUAV_Ht);
 
 			uint32 group_count_x = (ImmutableParams.g_ActualDim + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X;
 			uint32 group_count_y = (ImmutableParams.g_ActualDim + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;
-			RHIDispatchComputeShader(group_count_x, group_count_y, 1);
+			RHICmdList.DispatchComputeShader(group_count_x, group_count_y, 1);
 
-			UpdateSpectrumCS->UnsetParameters();
-			UpdateSpectrumCS->UnbindBuffers();
+			UpdateSpectrumCS->UnsetParameters(RHICmdList);
+			UpdateSpectrumCS->UnbindBuffers(RHICmdList);
 		});
 
 	// ------------------------------------ Perform FFT -------------------------------------------
@@ -273,13 +290,13 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FShaderResourceViewRHIRef, m_pSRV_Dxyz, m_pSRV_Dxyz,
 		FShaderResourceViewRHIRef, m_pSRV_Ht, m_pSRV_Ht,
 		{
-			RadixCompute(pPlan, m_pUAV_Dxyz, m_pSRV_Dxyz, m_pSRV_Ht);
+			RadixCompute(RHICmdList, pPlan, m_pUAV_Dxyz, m_pSRV_Dxyz, m_pSRV_Ht);
 		});
 
 	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
 	FUpdateDisplacementPSPerFrame UpdateDisplacementPSPerFrameParams;
-	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
-	UpdateDisplacementPSPerFrameParams.g_GridLen = OceanConfig.DispMapDimension / OceanConfig.PatchLength;
+	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
+	UpdateDisplacementPSPerFrameParams.g_GridLen = StateActor->GetSpectrumConfig().DispMapDimension / StateActor->GetSpectrumConfig().PatchLength;
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
 	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
@@ -296,32 +313,33 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 			Parameters.GridLen = PerFrameParams.g_GridLen;
 
 			FUpdateDisplacementUniformBufferRef UniformBuffer =
-				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
-			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
-			//RHIClear(true, FLinearColor::Black, false, 0.f, false, 0, FIntRect());
+			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
+			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
 			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap());
 
 			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
-			SetGlobalBoundShaderState(UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *UpdateDisplacementPS);
+			SetGlobalBoundShaderState(RHICmdList, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *UpdateDisplacementPS);
 
-			UpdateDisplacementPS->SetParameters(ImmutableParams.g_ActualDim,
+			UpdateDisplacementPS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
 				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
 				ImmutableParams.g_DtxAddressOffset, ImmutableParams.g_DtyAddressOffset);
 
-			UpdateDisplacementPS->SetParameters(UniformBuffer, PerFrameParams.g_InputDxyz);
+			UpdateDisplacementPS->SetParameters(RHICmdList, UniformBuffer, PerFrameParams.g_InputDxyz);
 
-			RHIDrawPrimitiveUP(PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			DrawPrimitiveUP(RHICmdList, PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			//RHICopyToResolveTarget(TextureRenderTarget->GetRenderTargetTexture(), TextureRenderTarget->TextureRHI, false, FResolveParams());
 
-			UpdateDisplacementPS->UnsetParameters();
+			UpdateDisplacementPS->UnsetParameters(RHICmdList);
 		});
 
 	// ----------------------------------- Generate Normal ----------------------------------------
 	FGenGradientFoldingPSPerFrame GenGradientFoldingPSPerFrameParams;
-	GenGradientFoldingPSPerFrameParams.g_ChoppyScale = OceanConfig.ChoppyScale;
-	GenGradientFoldingPSPerFrameParams.g_GridLen = OceanConfig.DispMapDimension / OceanConfig.PatchLength;
+	GenGradientFoldingPSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
+	GenGradientFoldingPSPerFrameParams.g_GridLen = StateActor->GetSpectrumConfig().DispMapDimension / StateActor->GetSpectrumConfig().PatchLength;
 	FMemory::Memcpy(GenGradientFoldingPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
 	FTextureRenderTargetResource* GradientRenderTarget = GradientTarget->GameThread_GetRenderTargetResource();
@@ -338,26 +356,41 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 			Parameters.GridLen = PerFrameParams.g_GridLen;
 
 			FUpdateDisplacementUniformBufferRef UniformBuffer =
-				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
-			RHISetRenderTarget(TextureRenderTarget->GetRenderTargetTexture(), NULL);
-			//RHIClear(true, FLinearColor::Black, false, 0.f, false, 0, FIntRect());
+			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
+			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
 			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap());
 
 			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
-			SetGlobalBoundShaderState(UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *GenGradientFoldingPS);
+			SetGlobalBoundShaderState(RHICmdList, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *GenGradientFoldingPS);
 
-			GenGradientFoldingPS->SetParameters(ImmutableParams.g_ActualDim,
+			GenGradientFoldingPS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
 				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
 				ImmutableParams.g_DtxAddressOffset, ImmutableParams.g_DtyAddressOffset);
 
-			GenGradientFoldingPS->SetParameters(UniformBuffer, DisplacementRenderTarget->TextureRHI);
+			GenGradientFoldingPS->SetParameters(RHICmdList, UniformBuffer, DisplacementRenderTarget->TextureRHI);
 
-			RHIDrawPrimitiveUP(PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			DrawPrimitiveUP(RHICmdList, PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
+			//RHICopyToResolveTarget(TextureRenderTarget->GetRenderTargetTexture(), TextureRenderTarget->TextureRHI, false, FResolveParams());
 
-			GenGradientFoldingPS->UnsetParameters();
+			GenGradientFoldingPS->UnsetParameters(RHICmdList);
 	});
 	
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Buffered data access API
+
+FLinearColor UVaOceanSimulatorComponent::GetDisplacementColor(int32 X, int32 Y) const
+{
+	return FLinearColor::Black;
+}
+
+FLinearColor UVaOceanSimulatorComponent::GetGradientColor(int32 X, int32 Y) const
+{
+	return FLinearColor::Black;
 }

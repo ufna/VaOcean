@@ -2,7 +2,9 @@
 
 #include "VaOceanPluginPrivatePCH.h"
 
-void Radix008A(FRadixPlan512* Plan,
+void Radix008A(
+	FRHICommandListImmediate & RHICmdList,
+	FRadixPlan512* Plan,
 	uint32 ParamSet,
 	FUnorderedAccessViewRHIRef pUAV_Dst,
 	FShaderResourceViewRHIRef pSRV_Src,
@@ -22,31 +24,31 @@ void Radix008A(FRadixPlan512* Plan,
 	Parameters.PhaseBase = Plan->PerFrame[ParamSet].PhaseBase;
 
 	FRadixFFTUniformBufferRef UniformBuffer =
-		FRadixFFTUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleUse);
+		FRadixFFTUniformBufferRef::CreateUniformBufferImmediate(Parameters, EUniformBufferUsage::UniformBuffer_SingleFrame);
 
 	if (istride > 1)
 	{
 		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap());
-		RHISetComputeShader(Radix008A_CS->GetComputeShader());
+		RHICmdList.SetComputeShader(Radix008A_CS->GetComputeShader());
 
-		Radix008A_CS->SetParameters(UniformBuffer);
-		Radix008A_CS->SetParameters(pSRV_Src, pUAV_Dst);
+		Radix008A_CS->SetParameters(RHICmdList, UniformBuffer);
+		Radix008A_CS->SetParameters(RHICmdList, pSRV_Src, pUAV_Dst);
 
-		RHIDispatchComputeShader(grid, 1, 1);
+		RHICmdList.DispatchComputeShader(grid, 1, 1);
 
-		Radix008A_CS->UnsetParameters();
+		Radix008A_CS->UnsetParameters(RHICmdList);
 	}
 	else
 	{
 		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap());
-		RHISetComputeShader(Radix008A_CS2->GetComputeShader());
+		RHICmdList.SetComputeShader(Radix008A_CS2->GetComputeShader());
 
-		Radix008A_CS2->SetParameters(UniformBuffer);
-		Radix008A_CS2->SetParameters(pSRV_Src, pUAV_Dst);
+		Radix008A_CS2->SetParameters(RHICmdList, UniformBuffer);
+		Radix008A_CS2->SetParameters(RHICmdList, pSRV_Src, pUAV_Dst);
 
-		RHIDispatchComputeShader(grid, 1, 1);
+		RHICmdList.DispatchComputeShader(grid, 1, 1);
 
-		Radix008A_CS2->UnsetParameters();
+		Radix008A_CS2->UnsetParameters(RHICmdList);
 	}
 }
 
@@ -96,8 +98,13 @@ void RadixCreatePlan(FRadixPlan512* Plan, uint32 Slices)
 	
 	// Temp buffers
 	uint32 BytesPerElement = sizeof(float) * 2;
-	uint32 NumElements = (512 * Plan->Slices) * 512; 
-	Plan->pBuffer_Tmp = RHICreateStructuredBuffer(BytesPerElement, BytesPerElement * NumElements, NULL, (BUF_UnorderedAccess | BUF_ShaderResource));
+	uint32 NumElements = (512 * Plan->Slices) * 512;
+
+	FRHIResourceCreateInfo ResourceCreateInfo;
+	ResourceCreateInfo.BulkData = nullptr;
+	ResourceCreateInfo.ResourceArray = nullptr;
+	Plan->pBuffer_Tmp = RHICreateStructuredBuffer(BytesPerElement, BytesPerElement * NumElements, (BUF_UnorderedAccess | BUF_ShaderResource), ResourceCreateInfo);
+
 	Plan->pUAV_Tmp = RHICreateUnorderedAccessView(Plan->pBuffer_Tmp, false, false);
 	Plan->pSRV_Tmp = RHICreateShaderResourceView(Plan->pBuffer_Tmp);
 }
@@ -109,7 +116,9 @@ void RadixDestroyPlan(FRadixPlan512* Plan)
 	Plan->pSRV_Tmp.SafeRelease();
 }
 
-void RadixCompute(FRadixPlan512* Plan,
+void RadixCompute(
+	FRHICommandListImmediate& RHICmdList,
+	FRadixPlan512* Plan,
 	FUnorderedAccessViewRHIRef pUAV_Dst,
 	FShaderResourceViewRHIRef pSRV_Dst,
 	FShaderResourceViewRHIRef pSRV_Src)
@@ -121,20 +130,20 @@ void RadixCompute(FRadixPlan512* Plan,
 	FShaderResourceViewRHIRef pSRV_Tmp = Plan->pSRV_Tmp;
 
 	istride /= 8;
-	Radix008A(Plan, 0, pUAV_Tmp, pSRV_Src, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 0, pUAV_Tmp, pSRV_Src, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 1, pUAV_Dst, pSRV_Tmp, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 1, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 2, pUAV_Tmp, pSRV_Dst, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 2, pUAV_Tmp, pSRV_Dst, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 3, pUAV_Dst, pSRV_Tmp, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 3, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 4, pUAV_Tmp, pSRV_Dst, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 4, pUAV_Tmp, pSRV_Dst, thread_count, istride);
 
 	istride /= 8;
-	Radix008A(Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);
+	Radix008A(RHICmdList, Plan, 5, pUAV_Dst, pSRV_Tmp, thread_count, istride);
 }

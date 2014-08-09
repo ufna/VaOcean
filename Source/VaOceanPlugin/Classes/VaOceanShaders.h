@@ -84,6 +84,7 @@ public:
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		uint32 ParamActualDim,
 		uint32 ParamInWidth,
 		uint32 ParamOutWidth,
@@ -94,15 +95,16 @@ public:
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 
-		SetShaderValue(ComputeShaderRHI, ActualDim, ParamActualDim);
-		SetShaderValue(ComputeShaderRHI, InWidth, ParamInWidth);
-		SetShaderValue(ComputeShaderRHI, OutWidth, ParamOutWidth);
-		SetShaderValue(ComputeShaderRHI, OutHeight, ParamOutHeight);
-		SetShaderValue(ComputeShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
-		SetShaderValue(ComputeShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, ActualDim, ParamActualDim);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, InWidth, ParamInWidth);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, OutWidth, ParamOutWidth);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, OutHeight, ParamOutHeight);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
+		SetShaderValue(RHICmdList, ComputeShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		const FUpdateSpectrumUniformBufferRef& UniformBuffer,
 		FShaderResourceViewRHIRef ParamInputH0,
 		FShaderResourceViewRHIRef ParamInputOmega
@@ -110,36 +112,36 @@ public:
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 
-		SetUniformBufferParameter(ComputeShaderRHI, GetUniformBufferParameter<FUpdateSpectrumUniformParameters>(), UniformBuffer);
+		SetUniformBufferParameter(RHICmdList, ComputeShaderRHI, GetUniformBufferParameter<FUpdateSpectrumUniformParameters>(), UniformBuffer);
 
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, InputH0.GetBaseIndex(), ParamInputH0);
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, InputOmega.GetBaseIndex(), ParamInputOmega);
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, InputH0.GetBaseIndex(), ParamInputH0);
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, InputOmega.GetBaseIndex(), ParamInputOmega);
 	}
 
-	void UnsetParameters()
+	void UnsetParameters(FRHICommandList &RHICmdList)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 		FShaderResourceViewRHIParamRef NullSRV = FShaderResourceViewRHIParamRef();
 
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, InputH0.GetBaseIndex(), NullSRV);
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, InputOmega.GetBaseIndex(), NullSRV);
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, InputH0.GetBaseIndex(), NullSRV);
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, InputOmega.GetBaseIndex(), NullSRV);
 	}
 
-	void SetOutput(FUnorderedAccessViewRHIParamRef ParamOutputHtRW)
+	void SetOutput(FRHICommandList& RHICmdList, FUnorderedAccessViewRHIParamRef ParamOutputHtRW)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 		if (OutputHtRW.IsBound())
 		{
-			RHISetUAVParameter(ComputeShaderRHI, OutputHtRW.GetBaseIndex(), ParamOutputHtRW);
+			RHICmdList.SetUAVParameter(ComputeShaderRHI, OutputHtRW.GetBaseIndex(), ParamOutputHtRW);
 		}
 	}
 
-	void UnbindBuffers()
+	void UnbindBuffers(FRHICommandList& RHICmdList)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 		if (OutputHtRW.IsBound())
 		{
-			RHISetUAVParameter(ComputeShaderRHI, OutputHtRW.GetBaseIndex(), FUnorderedAccessViewRHIParamRef());
+			RHICmdList.SetUAVParameter(ComputeShaderRHI, OutputHtRW.GetBaseIndex(), FUnorderedAccessViewRHIParamRef());
 		}
 	}
 
@@ -206,27 +208,27 @@ public:
 	{
 	}
 
-	void SetParameters(const FRadixFFTUniformBufferRef& UniformBuffer)
+	void SetParameters(FRHICommandList& RHICmdList, const FRadixFFTUniformBufferRef& UniformBuffer)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 
-		SetUniformBufferParameter(ComputeShaderRHI, GetUniformBufferParameter<FRadixFFTUniformParameters>(), UniformBuffer);
+		SetUniformBufferParameter(RHICmdList, ComputeShaderRHI, GetUniformBufferParameter<FRadixFFTUniformParameters>(), UniformBuffer);
 	}
 
-	void SetParameters(FShaderResourceViewRHIRef ParamSrcData, FUnorderedAccessViewRHIRef ParamDstData)
+	void SetParameters(FRHICommandList& RHICmdList, FShaderResourceViewRHIRef ParamSrcData, FUnorderedAccessViewRHIRef ParamDstData)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), ParamSrcData);
-		RHISetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), ParamDstData);
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), ParamSrcData);
+		RHICmdList.SetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), ParamDstData);
 	}
 
-	void UnsetParameters()
+	void UnsetParameters(FRHICommandList& RHICmdList)
 	{
 		FComputeShaderRHIParamRef ComputeShaderRHI = GetComputeShader();
 
-		RHISetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), FShaderResourceViewRHIParamRef());
-		RHISetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), FUnorderedAccessViewRHIParamRef());
+		RHICmdList.SetShaderResourceViewParameter(ComputeShaderRHI, SrcData.GetBaseIndex(), FShaderResourceViewRHIParamRef());
+		RHICmdList.SetUAVParameter(ComputeShaderRHI, DstData.GetBaseIndex(), FUnorderedAccessViewRHIParamRef());
 	}
 
 	virtual bool Serialize(FArchive& Ar)
@@ -285,8 +287,8 @@ public:
 	virtual void InitRHI()
 	{
 		FVertexDeclarationElementList Elements;
-		Elements.Add(FVertexElement(0, STRUCT_OFFSET(FQuadVertex, Position), VET_Float4, 0));
-		Elements.Add(FVertexElement(0, STRUCT_OFFSET(FQuadVertex, UV), VET_Float2, 1));
+		Elements.Add(FVertexElement(0, STRUCT_OFFSET(FQuadVertex, Position), VET_Float4, 0, sizeof(FQuadVertex)));
+		Elements.Add(FVertexElement(0, STRUCT_OFFSET(FQuadVertex, UV), VET_Float2, 1, sizeof(FQuadVertex)));
 		VertexDeclarationRHI = RHICreateVertexDeclaration(Elements);
 	}
 
@@ -371,6 +373,7 @@ public:
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		uint32 ParamActualDim,
 		uint32 ParamInWidth,
 		uint32 ParamOutWidth,
@@ -381,31 +384,32 @@ public:
 	{
 		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
 
-		SetShaderValue(PixelShaderRHI, ActualDim, ParamActualDim);
-		SetShaderValue(PixelShaderRHI, InWidth, ParamInWidth);
-		SetShaderValue(PixelShaderRHI, OutWidth, ParamOutWidth);
-		SetShaderValue(PixelShaderRHI, OutHeight, ParamOutHeight);
-		SetShaderValue(PixelShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
-		SetShaderValue(PixelShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
+		SetShaderValue(RHICmdList, PixelShaderRHI, ActualDim, ParamActualDim);
+		SetShaderValue(RHICmdList, PixelShaderRHI, InWidth, ParamInWidth);
+		SetShaderValue(RHICmdList, PixelShaderRHI, OutWidth, ParamOutWidth);
+		SetShaderValue(RHICmdList, PixelShaderRHI, OutHeight, ParamOutHeight);
+		SetShaderValue(RHICmdList, PixelShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
+		SetShaderValue(RHICmdList, PixelShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		const FUpdateDisplacementUniformBufferRef& UniformBuffer,
 		FShaderResourceViewRHIRef ParamInputDxyz
 		)
 	{
 		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
 
-		SetUniformBufferParameter(PixelShaderRHI, GetUniformBufferParameter<FUpdateDisplacementUniformParameters>(), UniformBuffer);
+		SetUniformBufferParameter(RHICmdList, PixelShaderRHI, GetUniformBufferParameter<FUpdateDisplacementUniformParameters>(), UniformBuffer);
 
-		RHISetShaderResourceViewParameter(PixelShaderRHI, InputDxyz.GetBaseIndex(), ParamInputDxyz);
+		RHICmdList.SetShaderResourceViewParameter(PixelShaderRHI, InputDxyz.GetBaseIndex(), ParamInputDxyz);
 	}
 
-	void UnsetParameters()
+	void UnsetParameters(FRHICommandList& RHICmdList)
 	{
 		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
 
-		RHISetShaderResourceViewParameter(PixelShaderRHI, InputDxyz.GetBaseIndex(), FShaderResourceViewRHIParamRef());
+		RHICmdList.SetShaderResourceViewParameter(PixelShaderRHI, InputDxyz.GetBaseIndex(), FShaderResourceViewRHIParamRef());
 	}
 
 	virtual bool Serialize(FArchive& Ar)
@@ -479,6 +483,7 @@ public:
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		uint32 ParamActualDim,
 		uint32 ParamInWidth,
 		uint32 ParamOutWidth,
@@ -489,28 +494,29 @@ public:
 	{
 		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
 
-		SetShaderValue(PixelShaderRHI, ActualDim, ParamActualDim);
-		SetShaderValue(PixelShaderRHI, InWidth, ParamInWidth);
-		SetShaderValue(PixelShaderRHI, OutWidth, ParamOutWidth);
-		SetShaderValue(PixelShaderRHI, OutHeight, ParamOutHeight);
-		SetShaderValue(PixelShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
-		SetShaderValue(PixelShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
+		SetShaderValue(RHICmdList, PixelShaderRHI, ActualDim, ParamActualDim);
+		SetShaderValue(RHICmdList, PixelShaderRHI, InWidth, ParamInWidth);
+		SetShaderValue(RHICmdList, PixelShaderRHI, OutWidth, ParamOutWidth);
+		SetShaderValue(RHICmdList, PixelShaderRHI, OutHeight, ParamOutHeight);
+		SetShaderValue(RHICmdList, PixelShaderRHI, DtxAddressOffset, ParamDtxAddressOffset);
+		SetShaderValue(RHICmdList, PixelShaderRHI, DtyAddressOffset, ParamDtyAddressOffset);
 	}
 
 	void SetParameters(
+		FRHICommandList& RHICmdList,
 		const FUpdateDisplacementUniformBufferRef& UniformBuffer,
 		FTextureRHIParamRef DisplacementMapRHI
 		)
 	{
 		FPixelShaderRHIParamRef PixelShaderRHI = GetPixelShader();
 
-		SetUniformBufferParameter(PixelShaderRHI, GetUniformBufferParameter<FUpdateDisplacementUniformParameters>(), UniformBuffer);
+		SetUniformBufferParameter(RHICmdList, PixelShaderRHI, GetUniformBufferParameter<FUpdateDisplacementUniformParameters>(), UniformBuffer);
 
 		FSamplerStateRHIParamRef SamplerStateLinear = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-		SetTextureParameter(PixelShaderRHI, DisplacementMap, DisplacementMapSampler, SamplerStateLinear, DisplacementMapRHI);
+		SetTextureParameter(RHICmdList, PixelShaderRHI, DisplacementMap, DisplacementMapSampler, SamplerStateLinear, DisplacementMapRHI);
 	}
 
-	void UnsetParameters() {}
+	void UnsetParameters(FRHICommandList& RHICmdList) {}
 
 	virtual bool Serialize(FArchive& Ar)
 	{
