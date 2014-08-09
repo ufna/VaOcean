@@ -54,7 +54,8 @@ struct FRadixPlan512
 void RadixCreatePlan(FRadixPlan512* Plan, uint32 Slices);
 void RadixDestroyPlan(FRadixPlan512* Plan);
 
-void RadixCompute(	FRadixPlan512* Plan,
+void RadixCompute(	FRHICommandListImmediate& RHICmdList,
+					FRadixPlan512* Plan,
 					FUnorderedAccessViewRHIRef pUAV_Dst,
 					FShaderResourceViewRHIRef pSRV_Dst, 
 					FShaderResourceViewRHIRef pSRV_Src);

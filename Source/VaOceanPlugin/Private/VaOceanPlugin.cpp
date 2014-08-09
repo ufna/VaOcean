@@ -1,7 +1,6 @@
 // Copyright 2014 Vladimir Alyamkin. All Rights Reserved.
 
 #include "VaOceanPluginPrivatePCH.h"
-#include "VaOceanPlugin.generated.inl"
 
 class FVaOceanPlugin : public IVaOceanPlugin
 {
