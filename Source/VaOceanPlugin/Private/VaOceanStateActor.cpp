@@ -48,6 +48,11 @@ AVaOceanStateActor::AVaOceanStateActor(const class FPostConstructInitializePrope
 #endif // WITH_EDITORONLY_DATA
 
 	OceanSimulator = NULL;
+
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickGroup = TG_PrePhysics;
+	SetRemoteRoleForBackwardsCompat(ROLE_SimulatedProxy);
+	bReplicates = true;
 }
 
 void AVaOceanStateActor::PreInitializeComponents()

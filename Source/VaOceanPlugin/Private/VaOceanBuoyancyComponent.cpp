@@ -36,20 +36,12 @@ void UVaOceanBuoyancyComponent::InitializeComponent()
 	Super::InitializeComponent();
 
 	// Find updated component (mesh of owner)
-	USkeletalMeshComponent* SkeletalMesh = GetOwner()->FindComponentByClass<USkeletalMeshComponent>();
-	if (SkeletalMesh != NULL)
+	UPrimitiveComponent* PrimitiveComponent = GetOwner()->FindComponentByClass<UPrimitiveComponent>();
+	if (PrimitiveComponent != NULL)
 	{
-		UpdatedComponent = SkeletalMesh;
+		UpdatedPrimitive = PrimitiveComponent;
 	}
-	else
-	{
-		// Check static mesh
-		UStaticMeshComponent* StaticMesh = GetOwner()->FindComponentByClass<UStaticMeshComponent>();
-		if (StaticMesh != NULL)
-		{
-			UpdatedComponent = StaticMesh;
-		}
-	}
+	
 
 	if (UpdatedComponent == NULL)
 	{
@@ -98,11 +90,11 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 	{
 		return;
 	}
-
+	
 	const FVector OldLocation = MyOwner->GetActorLocation();
 	const FRotator OldRotation = MyOwner->GetActorRotation();
-	const FVector OldLinearVelocity = UpdatedComponent->GetPhysicsLinearVelocity();
-	const FVector OldAngularVelocity = UpdatedComponent->GetPhysicsAngularVelocity();
+	const FVector OldLinearVelocity = UpdatedPrimitive->GetPhysicsLinearVelocity();
+	const FVector OldAngularVelocity = UpdatedPrimitive->GetPhysicsAngularVelocity();
 	const FVector OldCenterOfMassWorld = OldLocation + OldRotation.RotateVector(COMOffset);
 	const FVector OwnerScale = MyOwner->GetActorScale();
 
@@ -147,7 +139,7 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 		// Apply actor scale
 		WaveForce *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
 
-		UpdatedComponent->AddForceAtLocation(WaveForce * Mass, TensionDotWorld);
+		UpdatedPrimitive->AddForceAtLocation(WaveForce * Mass, TensionDotWorld);
 	}
 
 	// Static metacentric forces (can be useful on small waves)
@@ -172,7 +164,7 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 		// Apply torque
 		TensionTorqueResult *= DeltaTime;
 		TensionTorqueResult *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
-		UpdatedComponent->AddTorque(TensionTorqueResult);
+		UpdatedPrimitive->AddTorque(TensionTorqueResult);
 	}
 }
 

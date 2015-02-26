@@ -28,7 +28,7 @@ void Radix008A(
 
 	if (istride > 1)
 	{
-		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap());
+		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Radix008A_CS->GetComputeShader());
 
 		Radix008A_CS->SetParameters(RHICmdList, UniformBuffer);
@@ -40,7 +40,7 @@ void Radix008A(
 	}
 	else
 	{
-		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap());
+		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap(ERHIFeatureLevel::SM5));
 		RHICmdList.SetComputeShader(Radix008A_CS2->GetComputeShader());
 
 		Radix008A_CS2->SetParameters(RHICmdList, UniformBuffer);
