@@ -12,7 +12,7 @@ void Radix008A(
 	uint32 istride)
 {
 	check(ParamSet < FFT_PARAM_SETS);
-
+	const auto FeatureLevel = GMaxRHIFeatureLevel;
 	// Setup execution configuration
 	uint32 grid = ThreadCount / COHERENCY_GRANULARITY;
 
@@ -28,7 +28,7 @@ void Radix008A(
 
 	if (istride > 1)
 	{
-		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap());
+		TShaderMapRef<FRadix008A_CS> Radix008A_CS(GetGlobalShaderMap(FeatureLevel));
 		RHICmdList.SetComputeShader(Radix008A_CS->GetComputeShader());
 
 		Radix008A_CS->SetParameters(RHICmdList, UniformBuffer);
@@ -40,7 +40,7 @@ void Radix008A(
 	}
 	else
 	{
-		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap());
+		TShaderMapRef<FRadix008A_CS2> Radix008A_CS2(GetGlobalShaderMap(FeatureLevel));
 		RHICmdList.SetComputeShader(Radix008A_CS2->GetComputeShader());
 
 		Radix008A_CS2->SetParameters(RHICmdList, UniformBuffer);
