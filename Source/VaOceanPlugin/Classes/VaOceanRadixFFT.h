@@ -1,4 +1,4 @@
-// Copyright 2014 Vladimir Alyamkin. All Rights Reserved.
+// Copyright 2014-2016 Vladimir Alyamkin. All Rights Reserved.
 
 #pragma once
 

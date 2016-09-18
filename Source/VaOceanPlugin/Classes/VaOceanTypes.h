@@ -5,7 +5,7 @@
 #include "VaOceanTypes.generated.h"
 
 /** Phillips spectrum configuration */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FSpectrumData
 {
 	GENERATED_USTRUCT_BODY()

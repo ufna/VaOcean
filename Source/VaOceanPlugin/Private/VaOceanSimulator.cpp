@@ -1,4 +1,4 @@
-// Copyright 2014 Vladimir Alyamkin. All Rights Reserved.
+// Copyright 2014-2016 Vladimir Alyamkin. All Rights Reserved.
 
 #include "VaOceanPluginPrivatePCH.h"
 
@@ -54,15 +54,15 @@ float Phillips(FVector2D K, FVector2D W, float v, float a, float dir_depend)
 
 
 //////////////////////////////////////////////////////////////////////////
-// Spectrum component
+// Phillips spectrum simulator
 
-UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const FObjectInitializer& PCIP)
-: Super(PCIP)
+AVaOceanSimulator::AVaOceanSimulator(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
-	bAutoActivate = true;
-	bWantsInitializeComponent = true;
-	PrimaryComponentTick.bCanEverTick = true;
-	//PrimaryComponentTick.TickGroup = TG_DuringPhysics;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickGroup = TG_DuringPhysics;
+	bReplicates = true;
+	NetUpdateFrequency = 10.f;
 
 	// Vertex to draw on render targets
 	m_pQuadVB[0].Set(-1.0f, -1.0f, 0.0f, 1.0f);
@@ -70,44 +70,14 @@ UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const FObjectInitializer&
 	m_pQuadVB[2].Set( 1.0f, -1.0f, 0.0f, 1.0f);
 	m_pQuadVB[3].Set( 1.0f,  1.0f, 0.0f, 1.0f);
 
-	// Be sure that there'is no garbede in it
-	StateActor = nullptr;
+	// Initialize simulator now
+	InitializeSimulator();
 }
 
-void UVaOceanSimulatorComponent::BeginDestroy()
+void AVaOceanSimulator::InitializeSimulator()
 {
-	RadixDestroyPlan(&FFTPlan);
-
-	m_pBuffer_Float2_H0.SafeRelease();
-	m_pUAV_H0.SafeRelease();
-	m_pSRV_H0.SafeRelease();
-
-	m_pBuffer_Float_Omega.SafeRelease();
-	m_pUAV_Omega.SafeRelease();
-	m_pSRV_Omega.SafeRelease();
-
-	m_pBuffer_Float2_Ht.SafeRelease();
-	m_pUAV_Ht.SafeRelease();
-	m_pSRV_Ht.SafeRelease();
-
-	m_pBuffer_Float_Dxyz.SafeRelease();
-	m_pUAV_Dxyz;
-	m_pSRV_Dxyz;
-
-	Super::BeginDestroy();
-}
-
-void UVaOceanSimulatorComponent::InitializeComponent()
-{
-	StateActor = Cast<AVaOceanStateActor>(GetOwner());
-	if (StateActor == NULL)
-	{
-		UE_LOG(LogVaOcean, Warning, TEXT("Simulator component should belong to VaOceanStateActor only!"));
-		return;
-	}
-
 	// Cache shader immutable parameters (looks ugly, but nicely used then)
-	UpdateSpectrumCSImmutableParams.g_ActualDim = StateActor->GetSpectrumConfig().DispMapDimension;
+	UpdateSpectrumCSImmutableParams.g_ActualDim = SpectrumConfig.DispMapDimension;
 	UpdateSpectrumCSImmutableParams.g_InWidth = UpdateSpectrumCSImmutableParams.g_ActualDim + 4;
 	UpdateSpectrumCSImmutableParams.g_OutWidth = UpdateSpectrumCSImmutableParams.g_ActualDim;
 	UpdateSpectrumCSImmutableParams.g_OutHeight = UpdateSpectrumCSImmutableParams.g_ActualDim;
@@ -115,14 +85,14 @@ void UVaOceanSimulatorComponent::InitializeComponent()
 	UpdateSpectrumCSImmutableParams.g_DtyAddressOffset = FMath::Square(UpdateSpectrumCSImmutableParams.g_ActualDim) * 2;
 
 	// Height map H(0)
-	int32 height_map_size = (StateActor->GetSpectrumConfig().DispMapDimension + 4) * (StateActor->GetSpectrumConfig().DispMapDimension + 1);
+	int32 height_map_size = (SpectrumConfig.DispMapDimension + 4) * (SpectrumConfig.DispMapDimension + 1);
 	TResourceArray<FVector2D> h0_data;
 	h0_data.Init(FVector2D::ZeroVector, height_map_size);
 	TResourceArray<float> omega_data;
 	omega_data.Init(0.0f, height_map_size);
-	InitHeightMap(StateActor->GetSpectrumConfig(), h0_data, omega_data);
+	InitHeightMap(SpectrumConfig, h0_data, omega_data);
 
-	int hmap_dim = StateActor->GetSpectrumConfig().DispMapDimension;
+	int hmap_dim = SpectrumConfig.DispMapDimension;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
 	// This value should be (hmap_dim / 2 + 1) * hmap_dim, but we use full sized buffer here for simplicity.
 	int input_half_size = hmap_dim * hmap_dim;
@@ -158,7 +128,7 @@ void UVaOceanSimulatorComponent::InitializeComponent()
 	RadixCreatePlan(&FFTPlan, 3);
 }
 
-void UVaOceanSimulatorComponent::InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
+void AVaOceanSimulator::InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
 {
 	int32 i, j;
 	FVector2D K, Kn;
@@ -200,7 +170,7 @@ void UVaOceanSimulatorComponent::InitHeightMap(const FSpectrumData& Params, TRes
 	}
 }
 
-void UVaOceanSimulatorComponent::CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
+void AVaOceanSimulator::CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride,
 	FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV)
 {
 	FRHIResourceCreateInfo ResourceCreateInfo;
@@ -211,44 +181,63 @@ void UVaOceanSimulatorComponent::CreateBufferAndUAV(FResourceArrayInterface* Dat
 	*ppSRV = RHICreateShaderResourceView(*ppBuffer);
 }
 
+void AVaOceanSimulator::BeginDestroy()
+{
+	RadixDestroyPlan(&FFTPlan);
+
+	m_pBuffer_Float2_H0.SafeRelease();
+	m_pUAV_H0.SafeRelease();
+	m_pSRV_H0.SafeRelease();
+
+	m_pBuffer_Float_Omega.SafeRelease();
+	m_pUAV_Omega.SafeRelease();
+	m_pSRV_Omega.SafeRelease();
+
+	m_pBuffer_Float2_Ht.SafeRelease();
+	m_pUAV_Ht.SafeRelease();
+	m_pSRV_Ht.SafeRelease();
+
+	m_pBuffer_Float_Dxyz.SafeRelease();
+	m_pUAV_Dxyz;
+	m_pSRV_Dxyz;
+
+	Super::BeginDestroy();
+}
+
 
 //////////////////////////////////////////////////////////////////////////
-// Ocean simulation (displacement map update)
+// Simulation
 
 #if WITH_EDITOR
-void UVaOceanSimulatorComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void AVaOceanSimulator::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	// AActor::PostEditChange will ForceUpdateComponents()
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
-	//UpdateContent();
+	// @todo Update shader configuration
 }
 #endif // WITH_EDITOR
 
-void UVaOceanSimulatorComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void AVaOceanSimulator::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	UpdateContent();
-}
-
-void UVaOceanSimulatorComponent::UpdateContent()
-{
 	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
 }
+
 
 /** Vertex declaration for the fullscreen 2D quad */
 TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
 
-void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
+void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 {
-	if (StateActor == NULL || DisplacementTarget == NULL || GradientTarget == NULL)
+	if (DisplacementTarget == NULL || GradientTarget == NULL)
 		return;
 	
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 	FUpdateSpectrumCSPerFrame UpdateSpectrumCSPerFrameParams;
-	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * StateActor->GetSpectrumConfig().TimeScale;
-	UpdateSpectrumCSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
+	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * SpectrumConfig.TimeScale;
+	UpdateSpectrumCSPerFrameParams.g_ChoppyScale = SpectrumConfig.ChoppyScale;
 	UpdateSpectrumCSPerFrameParams.m_pSRV_H0 = m_pSRV_H0;
 	UpdateSpectrumCSPerFrameParams.m_pSRV_Omega = m_pSRV_Omega;
 	UpdateSpectrumCSPerFrameParams.m_pUAV_Ht = m_pUAV_Ht;
@@ -296,8 +285,8 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
 	FUpdateDisplacementPSPerFrame UpdateDisplacementPSPerFrameParams;
-	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
-	UpdateDisplacementPSPerFrameParams.g_GridLen = StateActor->GetSpectrumConfig().DispMapDimension / StateActor->GetSpectrumConfig().PatchLength;
+	UpdateDisplacementPSPerFrameParams.g_ChoppyScale = SpectrumConfig.ChoppyScale;
+	UpdateDisplacementPSPerFrameParams.g_GridLen = SpectrumConfig.DispMapDimension / SpectrumConfig.PatchLength;
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
 	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
@@ -340,8 +329,8 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 
 	// ----------------------------------- Generate Normal ----------------------------------------
 	FGenGradientFoldingPSPerFrame GenGradientFoldingPSPerFrameParams;
-	GenGradientFoldingPSPerFrameParams.g_ChoppyScale = StateActor->GetSpectrumConfig().ChoppyScale;
-	GenGradientFoldingPSPerFrameParams.g_GridLen = StateActor->GetSpectrumConfig().DispMapDimension / StateActor->GetSpectrumConfig().PatchLength;
+	GenGradientFoldingPSPerFrameParams.g_ChoppyScale = SpectrumConfig.ChoppyScale;
+	GenGradientFoldingPSPerFrameParams.g_GridLen = SpectrumConfig.DispMapDimension / SpectrumConfig.PatchLength;
 	FMemory::Memcpy(GenGradientFoldingPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
 	FTextureRenderTargetResource* GradientRenderTarget = GradientTarget->GameThread_GetRenderTargetResource();
@@ -384,16 +373,10 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 	
 }
 
-
 //////////////////////////////////////////////////////////////////////////
-// Buffered data access API
+// Spectrum configuration
 
-FLinearColor UVaOceanSimulatorComponent::GetDisplacementColor(int32 X, int32 Y) const
+const FSpectrumData& AVaOceanSimulator::GetSpectrumConfig() const
 {
-	return FLinearColor::Black;
-}
-
-FLinearColor UVaOceanSimulatorComponent::GetGradientColor(int32 X, int32 Y) const
-{
-	return FLinearColor::Black;
+	return SpectrumConfig;
 }
