@@ -10,6 +10,6 @@ IMPLEMENT_SHADER_TYPE(, FQuadVS, TEXT("VaOcean_VS_PS"), TEXT("QuadVS"), SF_Verte
 IMPLEMENT_SHADER_TYPE(, FUpdateDisplacementPS, TEXT("VaOcean_VS_PS"), TEXT("UpdateDisplacementPS"), SF_Pixel);
 IMPLEMENT_SHADER_TYPE(, FGenGradientFoldingPS, TEXT("VaOcean_VS_PS"), TEXT("GenGradientFoldingPS"), SF_Pixel);
 
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateSpectrumUniformParameters, TEXT("VaPerFrameSp"));
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateDisplacementUniformParameters, TEXT("VaPerFrameDisp"));
-IMPLEMENT_UNIFORM_BUFFER_STRUCT(FRadixFFTUniformParameters, TEXT("VaPerFrameFFT"));
+IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateSpectrumUniformParameters, TEXT("PerFrameSp"));
+IMPLEMENT_UNIFORM_BUFFER_STRUCT(FUpdateDisplacementUniformParameters, TEXT("PerFrameDisp"));
+IMPLEMENT_UNIFORM_BUFFER_STRUCT(FRadixFFTUniformParameters, TEXT("PerFrameFFT"));
