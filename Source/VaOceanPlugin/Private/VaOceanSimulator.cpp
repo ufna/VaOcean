@@ -221,6 +221,11 @@ void AVaOceanSimulator::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 }
 #endif // WITH_EDITOR
 
+bool AVaOceanSimulator::ShouldTickIfViewportsOnly() const
+{
+	return true;
+}
+
 void AVaOceanSimulator::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);

@@ -33,10 +33,14 @@ protected:
 
 	// Begin UObject Interface
 	virtual void BeginDestroy() override;
+
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif // WITH_EDITOR
 	// End UObject Interface
+
+	/** Allow tick in editor */
+	virtual bool ShouldTickIfViewportsOnly() const override;
 
 
 	//////////////////////////////////////////////////////////////////////////
