@@ -2,7 +2,7 @@
 
 #include "VaOceanPluginPrivatePCH.h"
 
-UVaOceanBuoyancyComponent::UVaOceanBuoyancyComponent(const class FPostConstructInitializeProperties& PCIP)
+UVaOceanBuoyancyComponent::UVaOceanBuoyancyComponent(const FObjectInitializer& PCIP)
 	: Super(PCIP)
 {
 	bWantsInitializeComponent = true;
@@ -98,11 +98,12 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 	{
 		return;
 	}
+	UPrimitiveComponent* OldPrimitive = Cast<UPrimitiveComponent>(UpdatedComponent);
 
 	const FVector OldLocation = MyOwner->GetActorLocation();
 	const FRotator OldRotation = MyOwner->GetActorRotation();
-	const FVector OldLinearVelocity = UpdatedComponent->GetPhysicsLinearVelocity();
-	const FVector OldAngularVelocity = UpdatedComponent->GetPhysicsAngularVelocity();
+	const FVector OldLinearVelocity = OldPrimitive->GetPhysicsLinearVelocity();
+	const FVector OldAngularVelocity = OldPrimitive->GetPhysicsAngularVelocity();
 	const FVector OldCenterOfMassWorld = OldLocation + OldRotation.RotateVector(COMOffset);
 	const FVector OwnerScale = MyOwner->GetActorScale();
 
@@ -147,7 +148,7 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 		// Apply actor scale
 		WaveForce *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
 
-		UpdatedComponent->AddForceAtLocation(WaveForce * Mass, TensionDotWorld);
+		OldPrimitive->AddForceAtLocation(WaveForce * Mass, TensionDotWorld);
 	}
 
 	// Static metacentric forces (can be useful on small waves)
@@ -172,7 +173,7 @@ void UVaOceanBuoyancyComponent::PerformWaveReaction(float DeltaTime)
 		// Apply torque
 		TensionTorqueResult *= DeltaTime;
 		TensionTorqueResult *= OwnerScale.X;// *OwnerScale.Y * OwnerScale.Z;
-		UpdatedComponent->AddTorque(TensionTorqueResult);
+		OldPrimitive->AddTorque(TensionTorqueResult);
 	}
 }
 
