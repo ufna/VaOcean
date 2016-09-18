@@ -2,7 +2,7 @@
 
 #include "VaOceanPluginPrivatePCH.h"
 
-AVaOceanStateActorSimple::AVaOceanStateActorSimple(const class FPostConstructInitializeProperties& PCIP)
+AVaOceanStateActorSimple::AVaOceanStateActorSimple(const FObjectInitializer& PCIP)
 	: Super(PCIP)
 {
 	HeightMapWaves = 1;
@@ -163,7 +163,7 @@ FColor AVaOceanStateActorSimple::GetHeighMapPixelColor(float U, float V) const
 	const int PixelY = NormalizedV * (Height-1) + 1;
 
 	// Get color from
-	const FColor* SrcPtr = &((FColor*)(HeightMapRawData.GetTypedData()))[(PixelY - 1) * Width + PixelX - 1];
+	const FColor* SrcPtr = &((FColor*)(HeightMapRawData.GetData()))[(PixelY - 1) * Width + PixelX - 1];
 
 	return *SrcPtr;
 #else

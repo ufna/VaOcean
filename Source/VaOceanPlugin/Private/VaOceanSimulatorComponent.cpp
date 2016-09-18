@@ -56,7 +56,7 @@ float Phillips(FVector2D K, FVector2D W, float v, float a, float dir_depend)
 //////////////////////////////////////////////////////////////////////////
 // Spectrum component
 
-UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const class FPostConstructInitializeProperties& PCIP)
+UVaOceanSimulatorComponent::UVaOceanSimulatorComponent(const FObjectInitializer& PCIP)
 : Super(PCIP)
 {
 	bAutoActivate = true;
@@ -259,12 +259,13 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FUpdateSpectrumCSPerFrame, PerFrameParams, UpdateSpectrumCSPerFrameParams,
 		{
 			FUpdateSpectrumUniformParameters Parameters;
+			const auto FeatureLevel = GMaxRHIFeatureLevel;
 			Parameters.Time = PerFrameParams.g_Time;
 
 			FUpdateSpectrumUniformBufferRef UniformBuffer = 
 				FUpdateSpectrumUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
-			TShaderMapRef<FUpdateSpectrumCS> UpdateSpectrumCS(GetGlobalShaderMap());
+			TShaderMapRef<FUpdateSpectrumCS> UpdateSpectrumCS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 			RHICmdList.SetComputeShader(UpdateSpectrumCS->GetComputeShader());
 
 			UpdateSpectrumCS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
@@ -308,6 +309,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FUpdateSpectrumCSImmutable, ImmutableParams, UpdateSpectrumCSImmutableParams,		// We're using the same params as for CS
 		FUpdateDisplacementPSPerFrame, PerFrameParams, UpdateDisplacementPSPerFrameParams,
 		{
+			const auto FeatureLevel = GMaxRHIFeatureLevel;
 			FUpdateDisplacementUniformParameters Parameters;
 			Parameters.ChoppyScale = PerFrameParams.g_ChoppyScale;
 			Parameters.GridLen = PerFrameParams.g_GridLen;
@@ -318,11 +320,11 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
 			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
 
-			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
-			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap());
+			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
-			SetGlobalBoundShaderState(RHICmdList, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *UpdateDisplacementPS);
+			SetGlobalBoundShaderState(RHICmdList, GMaxRHIFeatureLevel, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *UpdateDisplacementPS);
 
 			UpdateDisplacementPS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
 				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
@@ -352,6 +354,7 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 		FTextureRenderTargetResource*, DisplacementRenderTarget, DisplacementRenderTarget,
 		{
 			FUpdateDisplacementUniformParameters Parameters;
+			const auto FeatureLevel = GMaxRHIFeatureLevel;
 			Parameters.ChoppyScale = PerFrameParams.g_ChoppyScale;
 			Parameters.GridLen = PerFrameParams.g_GridLen;
 
@@ -361,11 +364,11 @@ void UVaOceanSimulatorComponent::UpdateDisplacementMap(float WorldTime)
 			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
 			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
 
-			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap());
-			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap());
+			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 			static FGlobalBoundShaderState UpdateDisplacementBoundShaderState;
-			SetGlobalBoundShaderState(RHICmdList, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *GenGradientFoldingPS);
+			SetGlobalBoundShaderState(RHICmdList, GMaxRHIFeatureLevel, UpdateDisplacementBoundShaderState, GQuadVertexDeclaration.VertexDeclarationRHI, *QuadVS, *GenGradientFoldingPS);
 
 			GenGradientFoldingPS->SetParameters(RHICmdList, ImmutableParams.g_ActualDim,
 				ImmutableParams.g_InWidth, ImmutableParams.g_OutWidth, ImmutableParams.g_OutHeight,
