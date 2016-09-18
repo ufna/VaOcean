@@ -8,6 +8,9 @@
 #define BLOCK_SIZE_X 16
 #define BLOCK_SIZE_Y 16
 
+/** Vertex declaration for the fullscreen 2D quad */
+TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
+
 
 //////////////////////////////////////////////////////////////////////////
 // Height map generation helpers
@@ -218,16 +221,12 @@ void AVaOceanSimulator::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
 }
 #endif // WITH_EDITOR
 
-void AVaOceanSimulator::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void AVaOceanSimulator::Tick(float DeltaSeconds)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	Super::Tick(DeltaSeconds);
 
 	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
 }
-
-
-/** Vertex declaration for the fullscreen 2D quad */
-TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
 
 void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 {

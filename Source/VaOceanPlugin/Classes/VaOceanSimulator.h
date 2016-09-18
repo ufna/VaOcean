@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include "VaOceanTypes.h"
 #include "VaOceanPluginPrivatePCH.h"
+
 #include "VaOceanSimulator.generated.h"
 
 #define PAD16(n) (((n)+15)/16*16)
