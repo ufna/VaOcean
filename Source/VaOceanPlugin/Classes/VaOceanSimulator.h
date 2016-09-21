@@ -23,13 +23,19 @@ class VAOCEANPLUGIN_API AVaOceanSimulator : public AActor
 
 protected:
 	/** Initialize all buffers and prepare shaders */
-	void InitializeSimulator();
+	void InitializeInternalData();
 
 	/** Initialize the vector field */
 	void InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega);
 
 	/** Initialize buffers for shader */
 	void CreateBufferAndUAV(FResourceArrayInterface* Data, uint32 byte_width, uint32 byte_stride, FStructuredBufferRHIRef* ppBuffer, FUnorderedAccessViewRHIRef* ppUAV, FShaderResourceViewRHIRef* ppSRV);
+
+	/** Clear internal buffers and shader data */
+	void ClearInternalData();
+
+	/** Clear buffers and re-initalize them */
+	void ResetInternalData();
 
 	// Begin UObject Interface
 	virtual void BeginDestroy() override;
@@ -65,7 +71,7 @@ public:
 
 protected:
 	/** Ocean spectrum data */
-	UPROPERTY(EditDefaultsOnly, Category = Config)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Config)
 	FSpectrumData SpectrumConfig;
 
 
@@ -74,12 +80,12 @@ protected:
 
 public:
 	/** Render target for normal map that can be used by the editor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* DisplacementTarget;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Config)
+	UTextureRenderTarget2D* DisplacementTexture;
 
 	/** Render target for height map that can be used by the editor */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OceanSpectrum)
-	class UTextureRenderTarget2D* GradientTarget;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Config)
+	UTextureRenderTarget2D* GradientTexture;
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -117,5 +123,33 @@ protected:
 
 	/** FFT wrap-up */
 	FRadixPlan512 FFTPlan;
+
+	/** Initialization flags */
+	bool bSimulatorInitializated;
+
+
+	//////////////////////////////////////////////////////////////////////////
+	// Utilities
+
+public:
+	/**
+	 * Creates a new RenderTarget with desired params
+	 *
+	 * @param bInForceLinearGamma	Whether or not to force linear gamma
+	 * @param InPixelFormat			Pixel format of the render target
+	 * @param InTargetSize			Dimensions of the render target
+	 * @return						Created render target
+	 */
+	UTextureRenderTarget2D* CreateRenderTarget(bool bInForceLinearGamma, bool bNormalMap, EPixelFormat InPixelFormat, FIntPoint& InTargetSize);
+
+	/**
+	 * SetupsRenderTarget with desired params
+	 *
+	 * @param bInForceLinearGamma	Whether or not to force linear gamma
+	 * @param InPixelFormat			Pixel format of the render target
+	 * @param InTargetSize			Dimensions of the render target
+	 * @return						Created render target
+	 */
+	static void SetupRenderTarget(UTextureRenderTarget2D* InRenderTarget, bool bInForceLinearGamma, bool bNormalMap, EPixelFormat InPixelFormat, FIntPoint& InTargetSize);
 
 };

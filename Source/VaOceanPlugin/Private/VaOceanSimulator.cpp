@@ -72,12 +72,9 @@ AVaOceanSimulator::AVaOceanSimulator(const FObjectInitializer& ObjectInitializer
 	m_pQuadVB[1].Set(-1.0f,  1.0f, 0.0f, 1.0f);
 	m_pQuadVB[2].Set( 1.0f, -1.0f, 0.0f, 1.0f);
 	m_pQuadVB[3].Set( 1.0f,  1.0f, 0.0f, 1.0f);
-
-	// Initialize simulator now
-	InitializeSimulator();
 }
 
-void AVaOceanSimulator::InitializeSimulator()
+void AVaOceanSimulator::InitializeInternalData()
 {
 	// Cache shader immutable parameters (looks ugly, but nicely used then)
 	UpdateSpectrumCSImmutableParams.g_ActualDim = SpectrumConfig.DispMapDimension;
@@ -128,7 +125,10 @@ void AVaOceanSimulator::InitializeSimulator()
 	CreateBufferAndUAV(&zero_data, 3 * output_size * float2_stride, float2_stride, &m_pBuffer_Float_Dxyz, &m_pUAV_Dxyz, &m_pSRV_Dxyz);
 
 	// FFT
-	RadixCreatePlan(&FFTPlan, 3);
+	RadixCreatePlan(&FFTPlan, 3); 
+
+	// Turn the flag on
+	bSimulatorInitializated = true;
 }
 
 void AVaOceanSimulator::InitHeightMap(const FSpectrumData& Params, TResourceArray<FVector2D>& out_h0, TResourceArray<float>& out_omega)
@@ -184,7 +184,7 @@ void AVaOceanSimulator::CreateBufferAndUAV(FResourceArrayInterface* Data, uint32
 	*ppSRV = RHICreateShaderResourceView(*ppBuffer);
 }
 
-void AVaOceanSimulator::BeginDestroy()
+void AVaOceanSimulator::ClearInternalData()
 {
 	RadixDestroyPlan(&FFTPlan);
 
@@ -203,6 +203,19 @@ void AVaOceanSimulator::BeginDestroy()
 	m_pBuffer_Float_Dxyz.SafeRelease();
 	m_pUAV_Dxyz;
 	m_pSRV_Dxyz;
+
+	bSimulatorInitializated = false;
+}
+
+void AVaOceanSimulator::ResetInternalData()
+{
+	ClearInternalData();
+	InitializeInternalData();
+}
+
+void AVaOceanSimulator::BeginDestroy()
+{
+	ClearInternalData();
 
 	Super::BeginDestroy();
 }
@@ -230,14 +243,20 @@ void AVaOceanSimulator::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Check that data is initializated
+	if (!bSimulatorInitializated)
+	{
+		InitializeInternalData();
+	}
+
 	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
 }
 
 void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 {
-	if (DisplacementTarget == NULL || GradientTarget == NULL)
+	if (!DisplacementTexture || !GradientTexture)
 		return;
-	
+
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 	FUpdateSpectrumCSPerFrame UpdateSpectrumCSPerFrameParams;
 	UpdateSpectrumCSPerFrameParams.g_Time = WorldTime * SpectrumConfig.TimeScale;
@@ -294,7 +313,7 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 	UpdateDisplacementPSPerFrameParams.g_InputDxyz = m_pSRV_Dxyz;
 	FMemory::Memcpy(UpdateDisplacementPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
-	FTextureRenderTargetResource* DisplacementRenderTarget = DisplacementTarget->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* DisplacementRenderTarget = DisplacementTexture->GameThread_GetRenderTargetResource();
 
 	ENQUEUE_UNIQUE_RENDER_COMMAND_THREEPARAMETER(
 		UpdateDisplacementPSCommand,
@@ -337,7 +356,7 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 	GenGradientFoldingPSPerFrameParams.g_GridLen = SpectrumConfig.DispMapDimension / SpectrumConfig.PatchLength;
 	FMemory::Memcpy(GenGradientFoldingPSPerFrameParams.m_pQuadVB, m_pQuadVB, sizeof(m_pQuadVB[0]) * 4);
 
-	FTextureRenderTargetResource* GradientRenderTarget = GradientTarget->GameThread_GetRenderTargetResource();
+	FTextureRenderTargetResource* GradientRenderTarget = GradientTexture->GameThread_GetRenderTargetResource();
 
 	ENQUEUE_UNIQUE_RENDER_COMMAND_FOURPARAMETER(
 		GenGradientFoldingPSCommand,
@@ -355,7 +374,7 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
 			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
-			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
+			RHICmdList.Clear(true, FLinearColor(1.0f, 0.0f, 1.0f, 0.0f), false, 0.f, false, 0, FIntRect());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -383,4 +402,27 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 const FSpectrumData& AVaOceanSimulator::GetSpectrumConfig() const
 {
 	return SpectrumConfig;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Utilities
+
+UTextureRenderTarget2D* AVaOceanSimulator::CreateRenderTarget(bool bInForceLinearGamma, bool bNormalMap, EPixelFormat InPixelFormat, FIntPoint& InTargetSize)
+{
+	UTextureRenderTarget2D* NewRenderTarget = NewObject<UTextureRenderTarget2D>(this);
+	check(NewRenderTarget);
+
+	SetupRenderTarget(NewRenderTarget, bInForceLinearGamma, bNormalMap, InPixelFormat, InTargetSize);
+
+	return NewRenderTarget;
+}
+
+void AVaOceanSimulator::SetupRenderTarget(UTextureRenderTarget2D * InRenderTarget, bool bInForceLinearGamma, bool bNormalMap, EPixelFormat InPixelFormat, FIntPoint & InTargetSize)
+{
+	const FLinearColor ClearColor = bNormalMap ? FLinearColor(0.0f, 0.0f, 0.0f, 0.0f) : FLinearColor(1.0f, 0.0f, 1.0f, 0.0f);
+
+	InRenderTarget->ClearColor = ClearColor;
+	InRenderTarget->TargetGamma = 0.0f;
+	InRenderTarget->InitCustomFormat(InTargetSize.X, InTargetSize.Y, InPixelFormat, bInForceLinearGamma);
 }
