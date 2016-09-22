@@ -127,6 +127,9 @@ protected:
 	/** Initialization flags */
 	bool bSimulatorInitializated;
 
+	/** Internal world simulation time */
+	float SimulationWorldTime;
+
 
 	//////////////////////////////////////////////////////////////////////////
 	// Utilities

@@ -67,6 +67,8 @@ AVaOceanSimulator::AVaOceanSimulator(const FObjectInitializer& ObjectInitializer
 	bReplicates = true;
 	NetUpdateFrequency = 10.f;
 
+	SimulationWorldTime = 0.f;
+
 	// Vertex to draw on render targets
 	m_pQuadVB[0].Set(-1.0f, -1.0f, 0.0f, 1.0f);
 	m_pQuadVB[1].Set(-1.0f,  1.0f, 0.0f, 1.0f);
@@ -252,7 +254,11 @@ void AVaOceanSimulator::Tick(float DeltaSeconds)
 		InitializeInternalData();
 	}
 
-	UpdateDisplacementMap(0.f);// GetWorld()->GetTimeSeconds());
+	// Tick world time
+	SimulationWorldTime += DeltaSeconds;
+
+	// Process simulation shaders
+	UpdateDisplacementMap(SimulationWorldTime);
 }
 
 void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
@@ -398,6 +404,9 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 			DrawPrimitiveUP(RHICmdList, PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
 
 			GenGradientFoldingPS->UnsetParameters(RHICmdList);
+
+			// Generate new mipmaps now
+			RHICmdList.GenerateMips(TextureRenderTarget->TextureRHI);
 	});
 	
 }
