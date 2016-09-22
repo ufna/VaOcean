@@ -18,8 +18,8 @@ TGlobalResource<FQuadVertexDeclaration> GQuadVertexDeclaration;
 /** Generating gaussian random number with mean 0 and standard deviation 1 */
 float Gauss()
 {
-	float u1 = FMath::SRand();
-	float u2 = FMath::SRand();
+	float u1 = rand() / (float)RAND_MAX;
+	float u2 = rand() / (float)RAND_MAX;
 
 	if (u1 < 1e-6f)
 	{
@@ -146,6 +146,9 @@ void AVaOceanSimulator::InitHeightMap(const FSpectrumData& Params, TResourceArra
 	int height_map_dim = Params.DispMapDimension;
 	float patch_length = Params.PatchLength;
 
+	// Initialize random generator.
+	srand(0);
+
 	for (i = 0; i <= height_map_dim; i++)
 	{
 		// K is wave-vector, range [-|DX/W, |DX/W], [-|DY/H, |DY/H]
@@ -249,7 +252,7 @@ void AVaOceanSimulator::Tick(float DeltaSeconds)
 		InitializeInternalData();
 	}
 
-	UpdateDisplacementMap(GetWorld()->GetTimeSeconds());
+	UpdateDisplacementMap(0.f);// GetWorld()->GetTimeSeconds());
 }
 
 void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
@@ -331,6 +334,9 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 
 			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
 			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
+			
+			// Be sure we're blending right without any alpha influence on Color blending
+			RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 			TShaderMapRef<FUpdateDisplacementPS> UpdateDisplacementPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -345,7 +351,6 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 			UpdateDisplacementPS->SetParameters(RHICmdList, UniformBuffer, PerFrameParams.g_InputDxyz);
 
 			DrawPrimitiveUP(RHICmdList, PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
-			//RHICopyToResolveTarget(TextureRenderTarget->GetRenderTargetTexture(), TextureRenderTarget->TextureRHI, false, FResolveParams());
 
 			UpdateDisplacementPS->UnsetParameters(RHICmdList);
 		});
@@ -370,11 +375,13 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 			Parameters.ChoppyScale = PerFrameParams.g_ChoppyScale;
 			Parameters.GridLen = PerFrameParams.g_GridLen;
 
-			FUpdateDisplacementUniformBufferRef UniformBuffer =
-				FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
+			FUpdateDisplacementUniformBufferRef UniformBuffer = FUpdateDisplacementUniformBufferRef::CreateUniformBufferImmediate(Parameters, UniformBuffer_SingleFrame);
 
-			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), NULL);
-			RHICmdList.Clear(true, FLinearColor(1.0f, 0.0f, 1.0f, 0.0f), false, 0.f, false, 0, FIntRect());
+			SetRenderTarget(RHICmdList, TextureRenderTarget->GetRenderTargetTexture(), FTextureRHIRef());
+			RHICmdList.Clear(true, FLinearColor::Transparent, false, 0.f, false, 0, FIntRect());
+
+			// Be sure we're blending right without any alpha influence on Color blending
+			RHICmdList.SetBlendState(TStaticBlendState<>::GetRHI());
 
 			TShaderMapRef<FQuadVS> QuadVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 			TShaderMapRef<FGenGradientFoldingPS> GenGradientFoldingPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -389,7 +396,6 @@ void AVaOceanSimulator::UpdateDisplacementMap(float WorldTime)
 			GenGradientFoldingPS->SetParameters(RHICmdList, UniformBuffer, DisplacementRenderTarget->TextureRHI);
 
 			DrawPrimitiveUP(RHICmdList, PT_TriangleStrip, 2, PerFrameParams.m_pQuadVB, sizeof(PerFrameParams.m_pQuadVB[0]));
-			//RHICopyToResolveTarget(TextureRenderTarget->GetRenderTargetTexture(), TextureRenderTarget->TextureRHI, false, FResolveParams());
 
 			GenGradientFoldingPS->UnsetParameters(RHICmdList);
 	});
