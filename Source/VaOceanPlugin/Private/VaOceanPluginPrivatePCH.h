@@ -1,4 +1,4 @@
-// Copyright 2014 Vladimir Alyamkin. All Rights Reserved.
+// Copyright 2014-2016 Vladimir Alyamkin. All Rights Reserved.
 
 #pragma once
 
@@ -15,14 +15,10 @@
 #include "ModuleManager.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVaOcean, Log, All);
-DECLARE_LOG_CATEGORY_EXTERN(LogVaOceanPhysics, Log, All);
 
 #include "IVaOceanPlugin.h"
 
 #include "VaOceanTypes.h"
 #include "VaOceanShaders.h"
 #include "VaOceanRadixFFT.h"
-#include "VaOceanSimulatorComponent.h"
-#include "VaOceanBuoyancyComponent.h"
-#include "VaOceanStateActor.h"
-#include "VaOceanStateActorSimple.h"
+#include "VaOceanSimulator.h"

@@ -42,8 +42,8 @@ void UpdateDisplacementPS(float2 UV : TEXCOORD0, out float4 OutColor : SV_Target
 	// cos(pi * (m1 + m2))
 	int sign_correction = ((index_x + index_y) & 1) ? -1 : 1;
 
-	float dx = g_InputDxyz[addr + g_DtxAddressOffset].x * sign_correction * VaPerFrameDisp.ChoppyScale;
-	float dy = g_InputDxyz[addr + g_DtyAddressOffset].x * sign_correction * VaPerFrameDisp.ChoppyScale;
+	float dx = g_InputDxyz[addr + g_DtxAddressOffset].x * sign_correction * PerFrameDisp.ChoppyScale;
+	float dy = g_InputDxyz[addr + g_DtyAddressOffset].x * sign_correction * PerFrameDisp.ChoppyScale;
 	float dz = g_InputDxyz[addr].x * sign_correction;
 
 	OutColor = float4(dx, dy, dz, 1);
@@ -75,8 +75,8 @@ void GenGradientFoldingPS(float2 UV : TEXCOORD0, out float4 OutColor : SV_Target
 	
 
 	// Calculate Jacobian corelation from the partial differential of height field
-	float2 Dx = (displace_right.xy - displace_left.xy) * VaPerFrameDisp.ChoppyScale * VaPerFrameDisp.GridLen;
-	float2 Dy = (displace_front.xy - displace_back.xy) * VaPerFrameDisp.ChoppyScale * VaPerFrameDisp.GridLen;
+	float2 Dx = (displace_right.xy - displace_left.xy) * PerFrameDisp.ChoppyScale * PerFrameDisp.GridLen;
+	float2 Dy = (displace_front.xy - displace_back.xy) * PerFrameDisp.ChoppyScale * PerFrameDisp.GridLen;
 	float J = (1.0f + Dx.x) * (1.0f + Dy.y) - Dx.y * Dy.x;
 
 	// Practical subsurface scale calculation: max[0, (1 - J) + Amplitude * (2 * Coverage - 1)].

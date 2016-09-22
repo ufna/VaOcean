@@ -102,43 +102,43 @@ void TWIDDLE_8(inout float2 D[8], float phase)
 [numthreads(COHERENCY_GRANULARITY, 1, 1)]
 void Radix008A_CS(uint3 thread_id : SV_DispatchThreadID)
 {
-    if (thread_id.x >= VaPerFrameFFT.ThreadCount)
-        return;
+	if (thread_id.x >= PerFrameFFT.ThreadCount)
+		return;
 
 	// Fetch 8 complex numbers
 	float2 D[8];
 
 	uint i;
-	uint imod = thread_id & (VaPerFrameFFT.istride - 1);
+	uint imod = thread_id & (PerFrameFFT.istride - 1);
 	uint iaddr = ((thread_id - imod) << 3) + imod;
 	for (i = 0; i < 8; i++)
 	{
-		D[i] = g_SrcData[iaddr + i * VaPerFrameFFT.istride];
+		D[i] = g_SrcData[iaddr + i * PerFrameFFT.istride];
 	}
 
 	// Math
 	FFT_forward_8(D);
-	uint p = thread_id & (VaPerFrameFFT.istride - VaPerFrameFFT.pstride);
-	float phase = VaPerFrameFFT.PhaseBase * (float)p;
+	uint p = thread_id & (PerFrameFFT.istride - PerFrameFFT.pstride);
+	float phase = PerFrameFFT.PhaseBase * (float)p;
 	TWIDDLE_8(D, phase);
 
 	// Store the result
-	uint omod = thread_id & (VaPerFrameFFT.ostride - 1);
+	uint omod = thread_id & (PerFrameFFT.ostride - 1);
 	uint oaddr = ((thread_id - omod) << 3) + omod;
-    g_DstData[oaddr + 0 * VaPerFrameFFT.ostride] = D[0];
-    g_DstData[oaddr + 1 * VaPerFrameFFT.ostride] = D[4];
-    g_DstData[oaddr + 2 * VaPerFrameFFT.ostride] = D[2];
-    g_DstData[oaddr + 3 * VaPerFrameFFT.ostride] = D[6];
-    g_DstData[oaddr + 4 * VaPerFrameFFT.ostride] = D[1];
-    g_DstData[oaddr + 5 * VaPerFrameFFT.ostride] = D[5];
-    g_DstData[oaddr + 6 * VaPerFrameFFT.ostride] = D[3];
-    g_DstData[oaddr + 7 * VaPerFrameFFT.ostride] = D[7];
+	g_DstData[oaddr + 0 * PerFrameFFT.ostride] = D[0];
+	g_DstData[oaddr + 1 * PerFrameFFT.ostride] = D[4];
+	g_DstData[oaddr + 2 * PerFrameFFT.ostride] = D[2];
+	g_DstData[oaddr + 3 * PerFrameFFT.ostride] = D[6];
+	g_DstData[oaddr + 4 * PerFrameFFT.ostride] = D[1];
+	g_DstData[oaddr + 5 * PerFrameFFT.ostride] = D[5];
+	g_DstData[oaddr + 6 * PerFrameFFT.ostride] = D[3];
+	g_DstData[oaddr + 7 * PerFrameFFT.ostride] = D[7];
 }
 
 [numthreads(COHERENCY_GRANULARITY, 1, 1)]
 void Radix008A_CS2(uint3 thread_id : SV_DispatchThreadID)
 {
-	if(thread_id.x >= VaPerFrameFFT.ThreadCount)
+	if(thread_id.x >= PerFrameFFT.ThreadCount)
 		return;
 
 	// Fetch 8 complex numbers
@@ -154,14 +154,14 @@ void Radix008A_CS2(uint3 thread_id : SV_DispatchThreadID)
 	FFT_forward_8(D);
 
 	// Store the result
-	uint omod = thread_id & (VaPerFrameFFT.ostride - 1);
+	uint omod = thread_id & (PerFrameFFT.ostride - 1);
 	uint oaddr = ((thread_id - omod) << 3) + omod;
-	g_DstData[oaddr + 0 * VaPerFrameFFT.ostride] = D[0];
-	g_DstData[oaddr + 1 * VaPerFrameFFT.ostride] = D[4];
-	g_DstData[oaddr + 2 * VaPerFrameFFT.ostride] = D[2];
-	g_DstData[oaddr + 3 * VaPerFrameFFT.ostride] = D[6];
-	g_DstData[oaddr + 4 * VaPerFrameFFT.ostride] = D[1];
-	g_DstData[oaddr + 5 * VaPerFrameFFT.ostride] = D[5];
-	g_DstData[oaddr + 6 * VaPerFrameFFT.ostride] = D[3];
-	g_DstData[oaddr + 7 * VaPerFrameFFT.ostride] = D[7];
+	g_DstData[oaddr + 0 * PerFrameFFT.ostride] = D[0];
+	g_DstData[oaddr + 1 * PerFrameFFT.ostride] = D[4];
+	g_DstData[oaddr + 2 * PerFrameFFT.ostride] = D[2];
+	g_DstData[oaddr + 3 * PerFrameFFT.ostride] = D[6];
+	g_DstData[oaddr + 4 * PerFrameFFT.ostride] = D[1];
+	g_DstData[oaddr + 5 * PerFrameFFT.ostride] = D[5];
+	g_DstData[oaddr + 6 * PerFrameFFT.ostride] = D[3];
+	g_DstData[oaddr + 7 * PerFrameFFT.ostride] = D[7];
 }
