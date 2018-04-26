@@ -1,7 +1,7 @@
 Welcome to the VaOcean source code!
 ===================================
 
-Attn.! This branch contains archived version of plugin for UE 4.12 based on [NVIDIA SDK sample](https://developer.nvidia.com/dx11-samples) "FFT Ocean". It's deprecated and lives here for history only.
+**Attn.! This branch contains archived version of plugin for UE 4.12 based on [NVIDIA SDK sample](https://developer.nvidia.com/dx11-samples) "FFT Ocean". It's deprecated and lives here for history only.**
 
 ----------
 
