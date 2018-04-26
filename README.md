@@ -1,6 +1,10 @@
 Welcome to the VaOcean source code!
 ===================================
 
+Attn.! This branch contains archived version of plugin for UE 4.12 based on [NVIDIA SDK sample](https://developer.nvidia.com/dx11-samples) "FFT Ocean". It's deprecated and lives here for history only.
+
+----------
+
 VaOcean is the ocean surface simulation plugin for [Unreal Engine 4](https://www.unrealengine.com/).
 
 The plugin includes:
@@ -20,8 +24,6 @@ Legal info
 ----------
 
 Unreal® is a trademark or registered trademark of Epic Games, Inc. in the United States of America and elsewhere. Unreal® Engine, Copyright 1998 – 2014, Epic Games, Inc. All rights reserved.
-
-Plugin is completely **free** and available under [MIT open-source license](LICENSE).
 
 
 References
