@@ -4,12 +4,17 @@ Overview
 VaOcean is the ocean surface simulation plugin for [Unreal Engine 4](https://www.unrealengine.com/).
 
 Key features:
- * **@TODO** Plugin in development mode!!! 
- * Old version based on [NVIDIA SDK sample](https://developer.nvidia.com/dx11-samples) "FFT Ocean" lives in [archive_UE4.12](https://github.com/ufna/VaOcean/tree/archive_UE4.12) branch
+* Component that renders displacement and gradient (normal) maps in real time
+* Sample content, including water shader and grid meshes to be used on scene
+* Set of global shaders that perform FFT calculation and other tech stuff on GPU
 
 Check the **[Wiki](https://github.com/ufna/VaOcean/wiki)** tab to know more about the plugin.
 
-Current version: **0.5 A 1** (UE 4.19)
+Current version: **0.6 A 1** (UE 4.19)
+
+Right now the plugin is a state of development. More features should be added soon! 
+
+To install this plugin simpy drop it into the plugin folder in your project root directory. The enable it from the plug in menu. An example map is included.
 
 ![SCREENSHOT](SCREENSHOT.jpg)
 

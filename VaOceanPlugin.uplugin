@@ -1,0 +1,23 @@
+{
+    "FileVersion": 3,
+	"Version": 7,
+	"VersionName": "0.6",
+	"FriendlyName": "VaOcean",
+	"Description": "Ocean surface simulation plugin",
+	"Category": "Environment",
+	"CreatedBy": "Vladimir Alyamkin",
+	"CreatedByURL": "http://alyamkin.com",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+    {
+      "Name": "VaOceanPlugin",
+      "Type": "Developer",
+      "LoadingPhase": "PostConfigInit"
+    }
+	]
+}
